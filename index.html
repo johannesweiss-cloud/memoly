@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Amsterdam ♡</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --white: #ffffff; --bg: #f7f7f5; --card-bg: #f0f0ee;
+  --border: #e2e2de; --text: #111111; --muted: #888880; --radius: 28px;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; font-weight: 300; min-height: 100vh; max-width: 430px; margin: 0 auto; padding-bottom: 110px; }
+
+.hero { background: var(--white); padding: 60px 28px 48px; text-align: center; border-bottom: 1px solid var(--border); }
+.hero-tag { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; display: block; }
+.hero h1 { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 600; line-height: 1.25; margin-bottom: 14px; }
+.hero h1 em { font-style: italic; font-weight: 400; }
+.hero-sub { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+.section-label { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); padding: 28px 20px 10px; }
+.date-list { display: flex; flex-direction: column; gap: 10px; padding: 0 14px; }
+
+.date-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; transition: box-shadow .2s; }
+.date-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.06); }
+.card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; cursor: pointer; user-select: none; -webkit-user-select: none; gap: 12px; }
+.card-header-left { flex: 1; min-width: 0; }
+.card-num { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.card-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; line-height: 1.2; }
+.card-desc-preview { font-size: 13px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.card-thumb { width: 42px; height: 42px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.chevron { width: 18px; height: 18px; color: var(--muted); transition: transform .25s ease; flex-shrink: 0; }
+.date-card.open .chevron { transform: rotate(180deg); }
+.card-body { max-height: 0; overflow: hidden; transition: max-height .35s cubic-bezier(.4,0,.2,1); }
+.date-card.open .card-body { max-height: 700px; }
+.card-body-inner { padding: 0 18px 20px; border-top: 1px solid var(--border); }
+.card-desc-full { font-size: 14px; line-height: 1.65; color: var(--muted); padding-top: 14px; margin-bottom: 14px; white-space: pre-wrap; }
+
+.img-zone { border: 1.5px dashed var(--border); border-radius: 14px; overflow: hidden; cursor: pointer; transition: border-color .2s; background: var(--bg); }
+.img-zone:hover { border-color: var(--muted); }
+.img-zone-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 28px 20px; color: var(--muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.img-zone-placeholder svg { opacity: .35; }
+.img-zone-preview { width: 100%; aspect-ratio: 16/10; object-fit: cover; display: block; }
+.img-zone-hint { font-size: 11px; text-align: center; color: var(--muted); padding: 7px; background: rgba(0,0,0,.03); }
+
+.add-btn-wrap { padding: 10px 14px 0; }
+.add-btn { width: 100%; background: var(--white); border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 17px; font-family: 'Outfit', sans-serif; font-size: 14px; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: border-color .2s, color .2s; }
+.add-btn:hover { border-color: var(--text); color: var(--text); }
+
+.extra-section { padding: 28px 14px 0; }
+.extra-label { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; padding: 0 4px; }
+.extra-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.extra-slot { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 1; cursor: pointer; border: 1.5px solid var(--border); background: var(--white); display: flex; align-items: center; justify-content: center; }
+.extra-delete { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; background: rgba(0,0,0,0.5); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background .2s; }
+.extra-delete:hover { background: rgba(255, 77, 77, 0.9); }
+
+.date-delete-btn { width: 100%; margin-top: 14px; padding: 12px; background: none; border: 1px solid rgba(255, 77, 77, 0.4); border-radius: 12px; color: #ff4d4d; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: background .2s; }
+.date-delete-btn:hover { background: rgba(255, 77, 77, 0.08); }
+.extra-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.extra-add { border: 1.5px dashed var(--border); border-radius: 14px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); background: var(--white); transition: border-color .2s, color .2s; }
+.extra-add:hover { border-color: var(--text); color: var(--text); }
+
+.bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: rgba(247,247,245,.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--border); padding: 12px 16px 24px; z-index: 200; }
+.export-btn { width: 100%; background: var(--text); color: var(--white); border: none; border-radius: 14px; padding: 15px; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity .2s; }
+.export-btn:hover { opacity: .85; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); z-index: 500; display: flex; align-items: flex-end; justify-content: center; }
+.modal-overlay.hidden { display: none; }
+.modal-sheet { background: var(--white); border-radius: 24px 24px 0 0; padding: 24px 22px 44px; width: 100%; max-width: 430px; animation: slideUp .3s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 22px; }
+.modal-sheet h3 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; margin-bottom: 18px; }
+.field-label { font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; display: block; }
+.field-input { width: 100%; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; font-family: 'Outfit', sans-serif; font-size: 15px; color: var(--text); outline: none; margin-bottom: 14px; -webkit-appearance: none; }
+.field-input:focus { border-color: var(--text); }
+textarea.field-input { resize: none; min-height: 86px; line-height: 1.55; }
+.modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+.modal-cancel { padding: 13px 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; font-family: 'Outfit', sans-serif; font-size: 14px; color: var(--muted); cursor: pointer; }
+.modal-save { flex: 1; padding: 13px; background: var(--text); border: none; border-radius: 12px; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 500; color: var(--white); cursor: pointer; }
+
+.setup-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--muted); cursor: pointer; opacity: 0.6; transition: opacity .2s; z-index: 100; }
+.setup-btn:hover { opacity: 1; }
+
+.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--white); padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 600; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<button class="setup-btn" onclick="openSetupModal()">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+</button>
+
+<div class="hero">
+  <span class="hero-tag" id="hero-tag-text">Amsterdam · 2026</span>
+  <h1><span id="hero-title-line1">Alles Gute zum</span><br><em id="hero-title-highlight">Geburtstag, Schatzi!</em></h1>
+  <p class="hero-sub" id="hero-sub-text">Date Ideen für unsere Zeit in Amsterdam</p>
+</div>
+
+<div class="section-label">Unsere Dates</div>
+<div class="date-list" id="date-list"></div>
+
+<div class="add-btn-wrap">
+  <button class="add-btn" onclick="openModal()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Neues Date hinzufügen
+  </button>
+</div>
+
+<div class="extra-section">
+  <div class="extra-label">Weitere Bilder</div>
+  <div class="extra-grid" id="extra-grid"></div>
+</div>
+
+<div class="bottom-bar">
+  <button class="export-btn" onclick="exportPDF()">Als Erinnerung exportieren ↓</button>
+</div>
+
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h3>Neues Date</h3>
+    <label class="field-label">Titel</label>
+    <input class="field-input" type="text" id="new-title" placeholder="z.B. Tretboot fahren…" autocomplete="off">
+    <label class="field-label">Beschreibung</label>
+    <textarea class="field-input" id="new-desc" placeholder="Was erwartet uns dort?"></textarea>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Abbrechen</button>
+      <button class="modal-save" onclick="addDate()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="setup-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h3>App Setup</h3>
+    <label class="field-label">Tag (z.B. Amsterdam · 2026)</label>
+    <input class="field-input" type="text" id="setup-tag" autocomplete="off">
+    <label class="field-label">Titel Zeile 1 (z.B. Alles Gute zum)</label>
+    <input class="field-input" type="text" id="setup-title1" autocomplete="off">
+    <label class="field-label">Titel Highlight (z.B. Geburtstag, Schatzi!)</label>
+    <input class="field-input" type="text" id="setup-title-highlight" autocomplete="off">
+    <label class="field-label">Untertitel</label>
+    <input class="field-input" type="text" id="setup-sub" autocomplete="off">
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeSetupModal()">Abbrechen</button>
+      <button class="modal-save" onclick="generateLink()">Link generieren</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+let dates = [];
+let extras = [];
+let eventId = 'default';
+
+function getStorageKey(base) {
+  return base + (eventId === 'default' ? '' : '-' + eventId);
+}
+
+async function loadState() {
+  try {
+    const d = await localforage.getItem(getStorageKey('ams-dates-v2'));
+    const e = await localforage.getItem(getStorageKey('ams-extras-v2'));
+    dates = d ? d : getDefaultDates();
+    extras = e ? e : [];
+  } catch(_) { dates = getDefaultDates(); extras = []; }
+}
+
+async function saveState() {
+  try {
+    await localforage.setItem(getStorageKey('ams-dates-v2'), dates);
+    await localforage.setItem(getStorageKey('ams-extras-v2'), extras);
+  } catch(e) { showToast('Speicherfehler – Bilder evtl. zu groß'); }
+}
+
+function getDefaultDates() {
+  return [
+    { id: uid(), title: 'Tretboot', desc: 'Tretboot fahren in den Kanälen Amsterdams', img: null },
+    { id: uid(), title: 'Flughafen', desc: 'Flugzeugen beim Starten und Landen zuschauen', img: null },
+    { id: uid(), title: 'Lookout', desc: 'Schöne Aussicht über ganz Amsterdam', img: null },
+    { id: uid(), title: 'Topgolf', desc: 'Minigolf aber mal bisschen anders', img: null },
+  ];
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function renderDates() {
+  const list = document.getElementById('date-list');
+  const openIds = new Set([...list.querySelectorAll('.date-card.open')].map(c => c.id.replace('card-','')));
+  list.innerHTML = '';
+  dates.forEach((d, i) => {
+    const card = document.createElement('div');
+    card.className = 'date-card' + (openIds.has(d.id) ? ' open' : '');
+    card.id = 'card-' + d.id;
+    const thumbHTML = d.img
+      ? `<div class="card-thumb"><img src="${d.img}" alt=""></div>`
+      : `<div class="card-thumb"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+    const imgZoneHTML = d.img
+      ? `<div class="img-zone" data-id="${d.id}"><img class="img-zone-preview" src="${d.img}" alt=""><div class="img-zone-hint">Tippen zum Ändern</div></div>`
+      : `<div class="img-zone" data-id="${d.id}"><div class="img-zone-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Foto hinzufügen</div></div>`;
+    card.innerHTML = `
+      <div class="card-header" data-toggle="${d.id}">
+        <div class="card-header-left">
+          <div class="card-num">Date ${String(i+1).padStart(2,'0')}</div>
+          <div class="card-title">${esc(d.title)}</div>
+          <div class="card-desc-preview">${esc(d.desc)}</div>
+        </div>
+        <div class="card-right">${thumbHTML}
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="card-body"><div class="card-body-inner">
+        <div class="card-desc-full">${esc(d.desc)}</div>
+        ${imgZoneHTML}
+        <button class="date-delete-btn" onclick="deleteDate('${d.id}')">Date löschen</button>
+      </div></div>`;
+    list.appendChild(card);
+  });
+  list.querySelectorAll('[data-toggle]').forEach(el => el.addEventListener('click', () => toggleCard(el.dataset.toggle)));
+  list.querySelectorAll('.img-zone').forEach(el => el.addEventListener('click', () => triggerDateUpload(el.dataset.id)));
+}
+
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  if (!card) return;
+  const isOpen = card.classList.contains('open');
+  document.querySelectorAll('.date-card.open').forEach(c => c.classList.remove('open'));
+  if (!isOpen) card.classList.add('open');
+}
+
+function renderExtras() {
+  const grid = document.getElementById('extra-grid');
+  grid.innerHTML = '';
+  extras.forEach((img, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'extra-slot';
+    const imgEl = document.createElement('img');
+    imgEl.src = img; imgEl.alt = '';
+    
+    const delBtn = document.createElement('div');
+    delBtn.className = 'extra-delete';
+    delBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!confirm('Dieses Bild löschen?')) return;
+      extras.splice(i, 1);
+      saveState();
+      renderExtras();
+      showToast('Bild gelöscht ✓');
+    });
+
+    slot.appendChild(imgEl);
+    slot.appendChild(delBtn);
+    slot.addEventListener('click', () => pickImage(dataUrl => { extras[i] = dataUrl; saveState(); renderExtras(); showToast('Bild geändert ✓'); }));
+    grid.appendChild(slot);
+  });
+  const addBtn = document.createElement('div');
+  addBtn.className = 'extra-add';
+  addBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+  addBtn.addEventListener('click', () => pickImage(dataUrl => { extras.push(dataUrl); saveState(); renderExtras(); showToast('Bild hinzugefügt ✓'); }));
+  grid.appendChild(addBtn);
+}
+
+let currentImageCallback = null;
+
+const globalFileInput = document.createElement('input');
+globalFileInput.type = 'file';
+globalFileInput.accept = 'image/*';
+globalFileInput.style.cssText = 'position: absolute; width: 1px; height: 1px; opacity: 0; z-index: -1; pointer-events: none; top: 0; left: 0;';
+document.body.appendChild(globalFileInput);
+
+globalFileInput.addEventListener('change', function() {
+  const file = this.files && this.files[0];
+  if (file && currentImageCallback) {
+    resizeImage(file, currentImageCallback);
+  }
+  this.value = '';
+  currentImageCallback = null;
+});
+
+function pickImage(onResult) {
+  currentImageCallback = onResult;
+  globalFileInput.click();
+}
+
+function resizeImage(file, callback) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      // Keep full image, just limit max dimension to save space
+      const MAX = 1800;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => showToast('Bild konnte nicht geladen werden');
+    img.src = e.target.result;
+  };
+  reader.onerror = () => showToast('Datei konnte nicht gelesen werden');
+  reader.readAsDataURL(file);
+}
+
+function triggerDateUpload(id) {
+  pickImage(dataUrl => {
+    const d = dates.find(x => x.id === id);
+    if (!d) return;
+    d.img = dataUrl; saveState(); renderDates();
+    requestAnimationFrame(() => {
+      const card = document.getElementById('card-' + id);
+      if (card) card.classList.add('open');
+    });
+    showToast('Foto gespeichert ✓');
+  });
+}
+
+function openModal() {
+  document.getElementById('modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('new-title').focus(), 350);
+}
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  document.getElementById('new-title').value = '';
+  document.getElementById('new-desc').value = '';
+}
+function addDate() {
+  const title = document.getElementById('new-title').value.trim();
+  const desc = document.getElementById('new-desc').value.trim();
+  if (!title) { document.getElementById('new-title').focus(); return; }
+  dates.push({ id: uid(), title, desc, img: null });
+  saveState(); renderDates(); closeModal();
+  showToast('Date hinzugefügt ✓');
+  setTimeout(() => document.getElementById('date-list').lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+}
+
+function deleteDate(id) {
+  if (!confirm('Dieses Date wirklich löschen?')) return;
+  dates = dates.filter(d => d.id !== id);
+  saveState();
+  renderDates();
+  showToast('Date gelöscht ✓');
+}
+
+document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+// ── PDF EXPORT ────────────────────────────────────────────────
+// Key insight: images are CONTAIN (never cropped), placed in a fixed column.
+// Portrait images get tall boxes, landscape images get wide boxes.
+// Each date row height adapts to the actual image height.
+
+async function exportPDF() {
+  if (!window.jspdf) { showToast('Bitte kurz warten…'); return; }
+  showToast('PDF wird erstellt…');
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+  // A4 dimensions
+  const PW = 210, PH = 297;
+  const ML = 14, MR = 14, MT = 14;
+  const CW = PW - ML - MR; // 182mm usable width
+
+  // Image column width (fixed), text column gets the rest
+  const IMG_COL = 78; // mm
+  const GAP = 8;       // mm between image and text
+  const TEXT_COL = CW - IMG_COL - GAP; // ~96mm
+
+  let y = MT;
+
+  // Load image, return HTMLImageElement
+  function loadImg(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  function getRoundedImgData(imgEl, w_mm, h_mm, r_mm = 2, bgColor = '#ffffff') {
+    const canvas = document.createElement('canvas');
+    let cw = imgEl.naturalWidth;
+    let ch = imgEl.naturalHeight;
+    const MAX = 1200;
+    if (cw > MAX || ch > MAX) {
+      const r = Math.max(cw/MAX, ch/MAX);
+      cw = Math.round(cw/r);
+      ch = Math.round(ch/r);
+    }
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, cw, ch);
+
+    const radiusPx = cw * (r_mm / w_mm);
+
+    ctx.beginPath();
+    ctx.moveTo(radiusPx, 0);
+    ctx.lineTo(cw - radiusPx, 0);
+    ctx.quadraticCurveTo(cw, 0, cw, radiusPx);
+    ctx.lineTo(cw, ch - radiusPx);
+    ctx.quadraticCurveTo(cw, ch, cw - radiusPx, ch);
+    ctx.lineTo(radiusPx, ch);
+    ctx.quadraticCurveTo(0, ch, 0, ch - radiusPx);
+    ctx.lineTo(0, radiusPx);
+    ctx.quadraticCurveTo(0, 0, radiusPx, 0);
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.drawImage(imgEl, 0, 0, cw, ch);
+    return canvas.toDataURL('image/jpeg', 0.95);
+  }
+
+  // Check if we need a new page, add one if so
+  function ensureSpace(needed) {
+    if (y + needed > PH - 12) {
+      pdf.addPage();
+      y = MT;
+    }
+  }
+
+  // ── HEADER ──────────────────────────────────────────────────
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(160, 160, 155);
+  pdf.setCharSpace(2);
+  const tagText = document.getElementById('hero-tag-text').innerText || '';
+  pdf.text(tagText.toUpperCase(), PW / 2, y + 5, { align: 'center' });
+  pdf.setCharSpace(0);
+  y += 10;
+
+  pdf.setFont('times', 'bold');
+  pdf.setFontSize(22);
+  pdf.setTextColor(17, 17, 17);
+  const title1 = document.getElementById('hero-title-line1').innerText || '';
+  const titleH = document.getElementById('hero-title-highlight').innerText || '';
+  pdf.text(`${title1} ${titleH}`.trim(), PW / 2, y + 7, { align: 'center' });
+  y += 13;
+
+  pdf.setFont('times', 'italic');
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(120, 120, 115);
+  const subText = document.getElementById('hero-sub-text').innerText || '';
+  pdf.text(subText, PW / 2, y + 4, { align: 'center' });
+  y += 9;
+
+  pdf.setDrawColor(215, 215, 210);
+  pdf.setLineWidth(0.25);
+  pdf.line(ML, y, PW - MR, y);
+  y += 7;
+
+  // ── DATE ROWS ───────────────────────────────────────────────
+  for (let i = 0; i < dates.length; i++) {
+    const d = dates[i];
+    const rev = i % 2 === 1;
+
+    // Calculate row height based on actual image dimensions
+    let imgDrawH = 55; // fallback height for placeholder
+    let imgEl = null;
+
+    if (d.img) {
+      imgEl = await loadImg(d.img);
+      if (imgEl) {
+        const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+        imgDrawH = IMG_COL / ratio; // actual height this image will take
+        // Cap very tall images so they don't take more than ~120mm
+        if (imgDrawH > 120) { imgDrawH = 120; }
+      }
+    }
+
+    // Min row height = enough for text label + title + desc
+    const minTextH = 50;
+    const rowH = Math.max(imgDrawH, minTextH);
+
+    ensureSpace(rowH + 10);
+
+    const imgX = rev ? ML + TEXT_COL + GAP : ML;
+    const textX = rev ? ML : ML + IMG_COL + GAP;
+
+    // Draw image or placeholder
+    if (imgEl) {
+      const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+      let drawW = IMG_COL;
+      let drawH = drawW / ratio;
+      if (drawH > 120) { drawH = 120; drawW = drawH * ratio; }
+      // Center horizontally within column if narrower
+      const offsetX = imgX + (IMG_COL - drawW) / 2;
+      const roundedSrc = getRoundedImgData(imgEl, drawW, drawH, 6, '#ffffff');
+      pdf.addImage(roundedSrc, 'JPEG', offsetX, y, drawW, drawH, '', 'FAST');
+    } else {
+      // Placeholder
+      pdf.setFillColor(242, 242, 240);
+      pdf.roundedRect(imgX, y, IMG_COL, imgDrawH, 6, 6, 'F');
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(185, 185, 180);
+      pdf.text('KEIN FOTO', imgX + IMG_COL / 2, y + imgDrawH / 2, { align: 'center' });
+    }
+
+    // Text block — vertically centered relative to image height
+    const textTopOffset = 2;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(165, 165, 158);
+    pdf.setCharSpace(1.8);
+    pdf.text(`DATE ${String(i+1).padStart(2,'0')}`, textX, y + textTopOffset + 5);
+    pdf.setCharSpace(0);
+
+    pdf.setFont('times', 'bold');
+    pdf.setFontSize(17);
+    pdf.setTextColor(17, 17, 17);
+    const titleLines = pdf.splitTextToSize(d.title, TEXT_COL);
+    pdf.text(titleLines, textX, y + textTopOffset + 13);
+    const titleBlockH = titleLines.length * 6.5;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(105, 105, 98);
+    const descLines = pdf.splitTextToSize(d.desc || '', TEXT_COL);
+    pdf.text(descLines, textX, y + textTopOffset + 13 + titleBlockH + 3);
+
+    y += rowH + 6;
+
+    // Divider
+    if (i < dates.length - 1) {
+      ensureSpace(4);
+      pdf.setDrawColor(228, 228, 223);
+      pdf.setLineWidth(0.2);
+      pdf.line(ML, y, PW - MR, y);
+      y += 6;
+    }
+  }
+
+  // ── EXTRA IMAGES ────────────────────────────────────────────
+  if (extras.length > 0) {
+    // 3 per row, square thumbnail, contain inside square
+    const COLS = 3;
+    const GAP_E = 5;
+    const THUMB = (CW - GAP_E * (COLS - 1)) / COLS; // ~56mm
+
+    y += 4;
+    ensureSpace(20 + THUMB);
+
+    pdf.setDrawColor(215, 215, 210);
+    pdf.setLineWidth(0.25);
+    pdf.line(ML, y, PW - MR, y);
+    y += 6;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(165, 165, 158);
+    pdf.setCharSpace(1.8);
+    pdf.text('WEITERE BILDER', ML, y + 3);
+    pdf.setCharSpace(0);
+    y += 8;
+
+    for (let i = 0; i < extras.length; i++) {
+      const col = i % COLS;
+      if (col === 0 && i > 0) {
+        y += THUMB + GAP_E;
+        ensureSpace(THUMB + GAP_E);
+      }
+      const ex = ML + col * (THUMB + GAP_E);
+
+      const imgEl = await loadImg(extras[i]);
+      if (imgEl) {
+        // Contain image within THUMB x THUMB square
+        const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+        let dw = THUMB, dh = THUMB;
+        if (ratio > 1) { dh = dw / ratio; } else { dw = dh * ratio; }
+        const ox = ex + (THUMB - dw) / 2;
+        const oy = y + (THUMB - dh) / 2;
+        // Light background for the square slot
+        pdf.setFillColor(245, 245, 243);
+        pdf.roundedRect(ex, y, THUMB, THUMB, 6, 6, 'F');
+        const roundedSrc = getRoundedImgData(imgEl, dw, dh, 6, '#f5f5f3');
+        pdf.addImage(roundedSrc, 'JPEG', ox, oy, dw, dh, '', 'FAST');
+      } else {
+        pdf.setFillColor(242, 242, 240);
+        pdf.roundedRect(ex, y, THUMB, THUMB, 6, 6, 'F');
+      }
+    }
+    y += THUMB + GAP_E;
+  }
+
+  pdf.save('amsterdam-erinnerung.pdf');
+  showToast('PDF gespeichert ✓');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function openSetupModal() {
+  document.getElementById('setup-tag').value = document.getElementById('hero-tag-text').innerText;
+  document.getElementById('setup-title1').value = document.getElementById('hero-title-line1').innerText;
+  document.getElementById('setup-title-highlight').value = document.getElementById('hero-title-highlight').innerText;
+  document.getElementById('setup-sub').value = document.getElementById('hero-sub-text').innerText;
+  document.getElementById('setup-modal').classList.remove('hidden');
+}
+
+function closeSetupModal() {
+  document.getElementById('setup-modal').classList.add('hidden');
+}
+
+async function generateLink() {
+  const tag = document.getElementById('setup-tag').value;
+  const t1 = document.getElementById('setup-title1').value;
+  const th = document.getElementById('setup-title-highlight').value;
+  const sub = document.getElementById('setup-sub').value;
+  
+  const newEventId = uid();
+  
+  const payload = {
+    eventId: newEventId,
+    tag: tag,
+    title1: t1,
+    titleH: th,
+    sub: sub,
+    dates: dates.map(d => ({ ...d, img: null }))
+  };
+  
+  const jsonStr = JSON.stringify(payload);
+  const base64 = btoa(encodeURIComponent(jsonStr));
+  
+  history.replaceState(null, null, '#data=' + base64);
+  
+  eventId = newEventId;
+  await saveState();
+  
+  document.getElementById('hero-tag-text').innerText = tag;
+  document.getElementById('hero-title-line1').innerText = t1;
+  document.getElementById('hero-title-highlight').innerText = th;
+  document.getElementById('hero-sub-text').innerText = sub;
+  
+  closeSetupModal();
+  
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    showToast('Link kopiert! ✓');
+  } catch(e) {
+    showToast('Kopieren fehlgeschlagen.');
+  }
+}
+
+async function init() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#data=')) {
+    try {
+      const base64 = hash.substring(6);
+      const payload = JSON.parse(decodeURIComponent(atob(base64)));
+      
+      eventId = payload.eventId || 'default';
+      
+      document.getElementById('hero-tag-text').innerText = payload.tag || '';
+      document.getElementById('hero-title-line1').innerText = payload.title1 || '';
+      document.getElementById('hero-title-highlight').innerText = payload.titleH || '';
+      document.getElementById('hero-sub-text').innerText = payload.sub || '';
+      
+      const storedDates = await localforage.getItem(getStorageKey('ams-dates-v2'));
+      if (!storedDates) {
+        dates = payload.dates || getDefaultDates();
+        await saveState();
+      } else {
+        await loadState();
+      }
+    } catch(e) {
+      console.error('Failed to parse URL data', e);
+      await loadState();
+    }
+  } else {
+    await loadState();
+  }
+  
+  renderDates();
+  renderExtras();
+}
+init();
+</script>
+</body>
+</html>
