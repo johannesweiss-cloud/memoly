@@ -174,8 +174,8 @@ Wird durch Fix #5 obsolet. Falls die localforage-Phase noch lange läuft: nach e
 
 ## 🟡 8. `getRoundedImgData` — Naht-Risiko bei Farbänderung
 
-- [ ] **Status:** offen
-- **Datei:** `index.html:866-900` und Aufruf in `index.html:1063-1065`
+- [x] **Status:** erledigt — `EXTRA_SLOT_BG` (`#f5f5f3`) und `EXTRA_SLOT_BG_RGB` werden in `exportPDF` einmal definiert und sowohl an `pdf.setFillColor(...)` als auch an `getRoundedImgData(..., bgColor)` weitergegeben.
+- **Datei:** `src/main.js` — `exportPDF` (Extra-Slot-Branch)
 - **Schwere:** Niedrig (aktuell nur latent)
 
 ### Symptom
@@ -192,8 +192,8 @@ const EXTRA_SLOT_BG = '#f5f5f3';
 
 ## 🟡 9. `puppeteer` in `dependencies` statt `devDependencies`
 
-- [ ] **Status:** offen
-- **Datei:** `package.json:13`
+- [x] **Status:** erledigt — `puppeteer` ist jetzt in `devDependencies`.
+- **Datei:** `package.json`
 - **Schwere:** Niedrig (kostet Build-Zeit und MB im Production-Install)
 
 ### Fix
@@ -209,8 +209,8 @@ npm install --save-dev puppeteer
 
 ## 🟡 10. CDN-only Abhängigkeiten im Frontend
 
-- [~] **Status:** teilweise — `localforage` ist raus (mit #5). `jspdf` lädt weiterhin vom Cloudflare-CDN; lokal bündeln via `npm install jspdf` ist noch offen.
-- **Datei:** `index.html:639-640`
+- [x] **Status:** erledigt — `jspdf` ist via `npm install jspdf` lokal gebündelt und wird in `src/main.js` per `import { jsPDF } from 'jspdf'` geladen. Cloudflare-`<script>`-Tag aus `index.html` entfernt.
+- **Datei:** `src/main.js`, `index.html`
 - **Schwere:** Niedrig (Verfügbarkeitsrisiko, kein Funktionsbug)
 
 ### Symptom
@@ -223,22 +223,19 @@ Nach Backend-Migration (#5): `localforage` fliegt raus. `jspdf` via `npm install
 
 ## 🟢 11. Code-Hygiene
 
-- [ ] **Status:** offen
+- [~] **Status:** teilweise — TODO-Kommentarblock in `updateEvent` ist raus (Fix #1/#2). `src/supabase.js` wirft jetzt hart, wenn env vars fehlen. Offen bleibt nur die `check.cjs`-Modernisierung.
 - **Schwere:** Trivial
 
 ### Sammelpunkte
-- `src/api.js:67-72` — Verwaister TODO-Kommentarblock in `updateEvent`. Mit Fix #1/#2 löschen.
-- `check.cjs` — Prüft nur `new Function(code)` (Syntax). Ersetzen durch `node --check` oder echten ESLint-Lauf, sobald die Codebase modularer ist.
-- `src/supabase.js:4-5` — Platzhalter-Strings `'YOUR_SUPABASE_URL'`. Beim Fehlen der env-Variable sollte hart abgebrochen werden statt einen unbrauchbaren Client zu erzeugen:
-  ```js
-  if (!url || !key) throw new Error('Supabase env vars missing — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
-  ```
+- [x] `src/api.js:67-72` — Verwaister TODO-Kommentarblock in `updateEvent`. Mit Fix #1/#2 gelöscht.
+- [ ] `check.cjs` — Prüft nur `new Function(code)` (Syntax). Ersetzen durch `node --check` oder echten ESLint-Lauf, sobald die Codebase modularer ist.
+- [x] `src/supabase.js` — Platzhalter-Strings entfernt. Beim Fehlen von `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` wird jetzt mit klarer Meldung geworfen, bevor `createClient` zum Einsatz kommt.
 
 ---
 
 ## Empfohlene Reihenfolge
 
-1. **#1 + #2** (zusammen, ein Fix) — Headers via `createClient` + Client-Reinit
-2. **#3** — Token pro Event keyen
-3. **#5** — Frontend an Backend anschließen (größter Brocken, danach erledigen sich #6, #7, #10 teilweise von selbst)
-4. **#8, #9, #11** — Kleinkram, jederzeit nebenher
+1. ~~**#1 + #2**~~ (erledigt) — Headers via `createClient` + Client-Reinit
+2. ~~**#3**~~ (erledigt) — Token pro Event keyen
+3. ~~**#5**~~ (erledigt) — Frontend an Backend anschließen
+4. ~~**#8, #9, #10, #11**~~ (erledigt bzw. weitgehend erledigt) — Kleinkram

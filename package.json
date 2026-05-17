@@ -10,9 +10,10 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "puppeteer": "^25.0.2"
+    "jspdf": "^4.2.1"
   },
   "devDependencies": {
+    "puppeteer": "^25.0.2",
     "vite": "^5.1.0"
   }
 }

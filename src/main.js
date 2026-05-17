@@ -1,3 +1,4 @@
+import { jsPDF } from 'jspdf';
 import {
   setActiveEvent,
   getEditToken,
@@ -406,11 +407,12 @@ async function handleDeleteExtra(id) {
 
 // ─── PDF Export ────────────────────────────────────────────────────
 async function exportPDF() {
-  if (!window.jspdf) { showToast('Bitte kurz warten…'); return; }
   showToast('PDF wird erstellt…');
 
-  const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+  const EXTRA_SLOT_BG = '#f5f5f3';
+  const EXTRA_SLOT_BG_RGB = [245, 245, 243];
 
   const PW = 210, PH = 297;
   const ML = 14, MR = 14, MT = 14;
@@ -617,9 +619,9 @@ async function exportPDF() {
         if (ratio > 1) dh = dw / ratio; else dw = dh * ratio;
         const ox = ex_x + (THUMB - dw) / 2;
         const oy = y + (THUMB - dh) / 2;
-        pdf.setFillColor(245, 245, 243);
+        pdf.setFillColor(...EXTRA_SLOT_BG_RGB);
         pdf.roundedRect(ex_x, y, THUMB, THUMB, 6, 6, 'F');
-        const roundedSrc = getRoundedImgData(imgEl, dw, dh, 6, '#f5f5f3');
+        const roundedSrc = getRoundedImgData(imgEl, dw, dh, 6, EXTRA_SLOT_BG);
         pdf.addImage(roundedSrc, 'JPEG', ox, oy, dw, dh, '', 'FAST');
       } else {
         pdf.setFillColor(242, 242, 240);

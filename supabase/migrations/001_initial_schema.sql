@@ -87,12 +87,12 @@ create policy "events: public insert"
 -- Supabase exposes request headers via current_setting()
 create policy "events: edit_token update"
   on events for update
-  using (edit_token = current_setting('request.headers', true)::json->>'x-edit-token')
-  with check (edit_token = current_setting('request.headers', true)::json->>'x-edit-token');
+  using (edit_token::text = current_setting('request.headers', true)::json->>'x-edit-token')
+  with check (edit_token::text = current_setting('request.headers', true)::json->>'x-edit-token');
 
 create policy "events: edit_token delete"
   on events for delete
-  using (edit_token = current_setting('request.headers', true)::json->>'x-edit-token');
+  using (edit_token::text = current_setting('request.headers', true)::json->>'x-edit-token');
 
 -- ---------- moments ----------
 
@@ -107,7 +107,7 @@ create policy "moments: edit_token write"
     exists (
       select 1 from events
       where id = moments.event_id
-        and edit_token = current_setting('request.headers', true)::json->>'x-edit-token'
+        and edit_token::text = current_setting('request.headers', true)::json->>'x-edit-token'
     )
   );
 
@@ -117,7 +117,7 @@ create policy "moments: edit_token update"
     exists (
       select 1 from events
       where id = moments.event_id
-        and edit_token = current_setting('request.headers', true)::json->>'x-edit-token'
+        and edit_token::text = current_setting('request.headers', true)::json->>'x-edit-token'
     )
   );
 
@@ -127,7 +127,7 @@ create policy "moments: edit_token delete"
     exists (
       select 1 from events
       where id = moments.event_id
-        and edit_token = current_setting('request.headers', true)::json->>'x-edit-token'
+        and edit_token::text = current_setting('request.headers', true)::json->>'x-edit-token'
     )
   );
 
@@ -143,7 +143,7 @@ create policy "extras: edit_token write"
     exists (
       select 1 from events
       where id = extras.event_id
-        and edit_token = current_setting('request.headers', true)::json->>'x-edit-token'
+        and edit_token::text = current_setting('request.headers', true)::json->>'x-edit-token'
     )
   );
 
@@ -153,7 +153,7 @@ create policy "extras: edit_token update"
     exists (
       select 1 from events
       where id = extras.event_id
-        and edit_token = current_setting('request.headers', true)::json->>'x-edit-token'
+        and edit_token::text = current_setting('request.headers', true)::json->>'x-edit-token'
     )
   );
 
@@ -163,6 +163,27 @@ create policy "extras: edit_token delete"
     exists (
       select 1 from events
       where id = extras.event_id
-        and edit_token = current_setting('request.headers', true)::json->>'x-edit-token'
+        and edit_token::text = current_setting('request.headers', true)::json->>'x-edit-token'
     )
   );
+
+-- ============================================================
+-- STORAGE ROW LEVEL SECURITY
+-- ============================================================
+
+-- Lesen (SELECT) erlauben - wird zwingend für "upsert: true" benötigt!
+create policy "Anyone can read event-images"
+  on storage.objects for select to anon, authenticated
+  using (bucket_id = 'event-images');
+
+-- Upload (INSERT) erlauben
+create policy "Anyone can upload to event-images"
+  on storage.objects for insert to anon, authenticated
+  with check (bucket_id = 'event-images');
+
+-- Re-Upload (upsert: true -> UPDATE) erlauben
+create policy "Anyone can update event-images"
+  on storage.objects for update to anon, authenticated
+  using (bucket_id = 'event-images')
+  with check (bucket_id = 'event-images');
+
