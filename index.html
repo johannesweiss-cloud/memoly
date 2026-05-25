@@ -557,6 +557,111 @@
     .toast.show {
       opacity: 1;
     }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 900;
+    }
+
+    .loading-overlay.hidden {
+      display: none;
+    }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--border);
+      border-top-color: var(--text);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-state {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 28px;
+      text-align: center;
+      gap: 12px;
+      z-index: 800;
+    }
+
+    .error-state.hidden {
+      display: none;
+    }
+
+    .error-state h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .error-state p {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .error-state-btn {
+      margin-top: 8px;
+      padding: 13px 28px;
+      background: var(--text);
+      color: var(--white);
+      border: none;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .share-btn {
+      width: 100%;
+      background: var(--white);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      transition: background .2s;
+    }
+
+    .share-btn:hover {
+      background: var(--card-bg);
+    }
+
+    .share-btn.hidden {
+      display: none;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 28px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
   </style>
 </head>
 
@@ -572,10 +677,9 @@
   </button>
 
   <div class="hero">
-    <span class="hero-tag" id="hero-tag-text">Amsterdam · 2026</span>
-    <h1><span id="hero-title-line1">Alles Gute zum</span><br><em id="hero-title-highlight">Geburtstag, Schatzi!</em>
-    </h1>
-    <p class="hero-sub" id="hero-sub-text">Date Ideen für unsere Zeit in Amsterdam</p>
+    <span class="hero-tag" id="hero-tag-text"></span>
+    <h1><span id="hero-title-line1"></span><br><em id="hero-title-highlight"></em></h1>
+    <p class="hero-sub" id="hero-sub-text"></p>
   </div>
 
   <div class="section-label">Unsere Dates</div>
@@ -596,7 +700,11 @@
     <div class="extra-grid" id="extra-grid"></div>
   </div>
 
-  <div class="bottom-bar">
+  <div class="bottom-bar" id="bottom-bar">
+    <button class="share-btn hidden" id="share-btn" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      Link kopieren
+    </button>
     <button class="export-btn" type="button">Als Erinnerung exportieren ↓</button>
   </div>
 
@@ -632,6 +740,16 @@
         <button class="modal-save" id="setup-save-btn" type="button">Event erstellen</button>
       </div>
     </div>
+  </div>
+
+  <div class="loading-overlay hidden" id="loading-overlay">
+    <div class="spinner"></div>
+  </div>
+
+  <div class="error-state hidden" id="error-state">
+    <h2>Event nicht gefunden</h2>
+    <p>Dieser Link ist ungültig oder das Event wurde gelöscht.</p>
+    <button class="error-state-btn" onclick="window.location.hash = '#/'">Neues Event erstellen</button>
   </div>
 
   <div class="toast" id="toast"></div>

@@ -14,9 +14,11 @@ A web app that turns a shared experience (a date, trip, family outing) into a be
 
 ---
 
-## Current state (post-migration)
+## Current state
 
 The v0 single-file localforage + URL-hash app has been migrated to a Vite-bundled, Supabase-backed app. The localforage code, the `generateLink`/`#data=<base64>` sharing trick, and the original inline `<script>` block are all gone.
+
+Supabase ist live angeschlossen (`vddmjeihfsmibtcwxaaa.supabase.co`): Schema-Migration läuft, `event-images`-Bucket existiert, alle drei Storage-RLS-Policies sind gesetzt (siehe `supabase/storage.md`). Lokaler End-to-End-Smoke-Test ist grün — Event anlegen, Moments mit Bildern, Extras, PDF-Export, Read-only-View im Inkognito-Browser. Noch **nicht** deployt; läuft nur auf `localhost:3001` (Port 3000 ist durch ein anderes lokales PWA-Projekt blockiert, `vite.config.js` setzt deshalb `strictPort: 3001`).
 
 ### Code layout
 
@@ -53,15 +55,17 @@ The v0 single-file localforage + URL-hash app has been migrated to a Vite-bundle
 
 ## To run locally
 
-1. Create `.env.local` in the project root:
+Auf diesem Rechner ist alles bereits eingerichtet — `.env.local` existiert, Bucket + Policies sind im verbundenen Supabase-Projekt drin. Für ein frisches Setup (z.B. zweiter Rechner, neuer Mitarbeiter):
+
+1. `.env.local` im Project-Root anlegen:
    ```
    VITE_SUPABASE_URL=https://<project>.supabase.co
    VITE_SUPABASE_ANON_KEY=<anon-key>
    ```
-   Without these, `createClient` throws `Invalid supabaseUrl` at module load.
-2. Apply `supabase/migrations/001_initial_schema.sql` in the Supabase SQL editor.
-3. Create a public bucket named `event-images` in Supabase Dashboard → Storage.
-4. `npm install && npm run dev`.
+   Ohne die wirft `src/supabase.js` einen klaren Fehler beim Modul-Load (Bug #11).
+2. `supabase/migrations/001_initial_schema.sql` im Supabase SQL Editor ausführen.
+3. Public Bucket `event-images` im Supabase Dashboard → Storage anlegen, **und die drei RLS-Policies aus `supabase/storage.md`** (INSERT, UPDATE, SELECT auf `storage.objects`). Die SELECT-Policy ist nicht-offensichtlich Pflicht — ohne sie schlägt `.upload()` mit irreführendem RLS-Fehler fehl.
+4. `npm install && npm run dev` → App läuft auf `http://localhost:3001/`.
 
 ---
 
@@ -115,13 +119,41 @@ This is the first project with a real monetization attempt. Previous project was
 - Push back on scope creep. If a feature isn't needed for the first paying customer, say so.
 - The emotional quality of the product matters. Design and UX decisions should reflect that this is a product people use for meaningful moments.
 
-## Open work
+## Status as of 2026-05-25
 
-Bugs #1–#11 in `BUGS.md` sind erledigt (einziger Resthappen: `check.cjs`-Modernisierung unter #11, nicht release-relevant).
+### Was in der Session vom 2026-05-25 gebaut wurde
 
-Larger unfinished pieces:
-- Lemon Squeezy integration (paywall before PDF export, webhook to flip `events.is_paid`).
-- Acceptance test for Bug #5 still to do manually: create an event in browser A, copy URL, open in browser B incognito → should show content read-only. Verifies the end-to-end backend flow with real credentials.
+UX-Polishing-Runde abgeschlossen. Alle Änderungen sind in `index.html` und `src/main.js`.
+
+**Gebaut:**
+- **Loading-State:** Spinner-Overlay (`#loading-overlay`) erscheint beim Laden einer Event-URL, verschwindet nach Daten-Fetch. Auf Home nicht gezeigt (Modal öffnet sofort). Entscheidung: erstmal simpler Spinner, Skeleton-Cards kommen später (steht im Backlog).
+- **Error-State:** Fullscreen-Overlay (`#error-state`) bei ungültiger oder gelöschter Event-UUID (wenn Supabase einen Fehler wirft, z.B. PGRST116). Zeigt „Event nicht gefunden" + Button zum Erstellen eines neuen Events.
+- **Copy-Link-Button:** Zweiter Button in der Bottom-Bar über dem Export-Button, sichtbar für alle auf einer Event-Seite (Edit und Read-only). Kopiert `window.location.href` via Clipboard API, zeigt kurz „Kopiert ✓" dann Reset. Entscheidung: für alle sichtbar, nicht nur Edit-Mode — ein Read-only-Betrachter soll den Link auch teilen können.
+- **Empty-States:** In `renderMoments()` — zeigt kontextabhängige Nachricht wenn `moments.length === 0` (Edit: „Füge deinen ersten Date hinzu", Read-only: „Noch keine Dates vorhanden").
+- **Extras-Sektion ausblenden:** `renderExtras()` blendet die ganze `.extra-section` aus wenn `extras.length === 0 && !canEdit`. Leere Sektion für Read-only-Besucher ergibt keinen Sinn.
+- **Bottom-Bar auf Home ausblenden:** `renderHome()` setzt `#bottom-bar` auf `display: none`. Export- und Share-Button gehören nicht auf die leere Home-Seite.
+- **Hardcoded Amsterdam-Text entfernt:** Hero-Spans in `index.html` sind jetzt leer by default. JS befüllt sie nach dem Laden.
+
+**Entscheidungen:**
+- Copy-Link-Button sitzt in der Bottom-Bar (nicht im Hero), damit er prominent und immer erreichbar ist.
+- Error-State ist ein fixed Overlay mit z-index 800 (unter dem Loading-Overlay bei 900).
+- Loading-State bleibt vorerst ein simpler Spinner — kein Skeleton, kein Shimmer. Aufwand vs. Nutzen passt nicht für jetzt.
+
+### Status vor dieser Session (2026-05-17)
+
+Alle Bugs #1–#11 aus `BUGS.md` erledigt. Reales Supabase-Projekt aufgesetzt, Schema applied, Bucket + drei Storage-Policies aktiv. `.env.local` lokal angelegt (gitignored). Vercel vorbereitet aber bewusst noch nicht deployed.
+
+## Next steps (priorisiert)
+
+1. **Design-Polishing.** UX-Struktur steht, jetzt visuelle Qualität heben. Offen: was genau — beim Durchklicken identifizieren was stört (Typografie, Abstände, Mobile-Brüche, Hero-Wirkung).
+2. **Lemon Squeezy Paywall vor PDF-Export.** Skizze: PDF-Button durch „Bezahlen & Herunterladen" ersetzen wenn `is_paid = false`, LS-Checkout mit `event_id` als Custom-Data, Supabase Edge Function als Webhook-Empfänger der `is_paid = true` setzt. Account + Produkt-Setup bei Lemon Squeezy ist Voraussetzung (Klick-Arbeit, nicht Code). Spalte `is_paid` existiert bereits im Schema.
+3. **Vercel-Deploy + Smoke-Test gegen Live-URL.** Repo importieren, Env-Vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) für Production/Preview/Development eintragen. Erst deployen wenn Design + Paywall fertig.
+
+## Backlog (nicht release-blockierend)
+
+- `check.cjs` durch `node --check` oder ESLint ersetzen.
+- Mögliche „Meine Events"-Übersicht (LocalStorage-Token-Map liest schon eine JSON-Map, also einfach umsetzbar wenn gewollt).
+- **Loading-State polishen:** Aktuell simpler Spinner. Soll später durch Skeleton-Cards ersetzt werden (Placeholder-Kacheln in Card-Form, grau animiert — wirkt wie die fertige Seite während sie lädt).
 
 ## Security rules (must always follow)
 

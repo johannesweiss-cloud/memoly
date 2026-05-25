@@ -116,6 +116,13 @@ function renderMoments() {
   const openIds = new Set([...list.querySelectorAll('.date-card.open')].map(c => c.id.replace('card-', '')));
   list.innerHTML = '';
 
+  if (moments.length === 0) {
+    list.innerHTML = canEdit
+      ? `<div class="empty-state">Noch keine Dates — füge deinen ersten hinzu</div>`
+      : `<div class="empty-state">Noch keine Dates vorhanden</div>`;
+    return;
+  }
+
   moments.forEach((m, i) => {
     const imgUrl = m.image_path ? getPublicImageUrl(m.image_path) : null;
     const card = document.createElement('div');
@@ -174,8 +181,15 @@ function toggleCard(id) {
 }
 
 function renderExtras() {
+  const section = $('.extra-section');
   const grid = $('#extra-grid');
   grid.innerHTML = '';
+
+  if (extras.length === 0 && !canEdit) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
 
   extras.forEach((ex) => {
     const url = ex.image_path ? getPublicImageUrl(ex.image_path) : null;
@@ -219,17 +233,19 @@ function renderEditAffordances() {
 }
 
 function renderHome() {
-  // No event in URL → show the setup CTA. The hero keeps its default text.
   $('#date-list').innerHTML = '';
   $('#extra-grid').innerHTML = '';
   $('.add-btn-wrap').style.display = 'none';
   $('.setup-btn').style.display = '';
+  $('#bottom-bar').style.display = 'none';
   canEdit = false;
   setupMode = 'create';
   openSetupModal();
 }
 
 function renderEvent() {
+  $('#bottom-bar').style.display = '';
+  $('#share-btn').classList.remove('hidden');
   renderHero();
   renderEditAffordances();
   renderMoments();
@@ -652,6 +668,19 @@ $('#setup-save-btn').addEventListener('click', submitSetupModal);
 $('#modal').addEventListener('click', function (e) { if (e.target === this) closeAddModal(); });
 $('#setup-modal').addEventListener('click', function (e) { if (e.target === this) closeSetupModal(); });
 
+$('#share-btn').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    const btn = $('#share-btn');
+    btn.textContent = 'Kopiert ✓';
+    setTimeout(() => {
+      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> Link kopieren`;
+    }, 2000);
+  } catch {
+    showToast('Konnte Link nicht kopieren');
+  }
+});
+
 window.addEventListener('hashchange', () => location.reload());
 
 // ─── Init ──────────────────────────────────────────────────────────
@@ -663,6 +692,7 @@ async function init() {
     return;
   }
 
+  $('#loading-overlay').classList.remove('hidden');
   setActiveEvent(route.eventId);
   canEdit = !!getEditToken(route.eventId);
 
@@ -672,10 +702,12 @@ async function init() {
     extras = await getExtras(route.eventId);
   } catch (e) {
     console.error('Failed to load event', e);
-    showToast('Event konnte nicht geladen werden');
+    $('#loading-overlay').classList.add('hidden');
+    $('#error-state').classList.remove('hidden');
     return;
   }
 
+  $('#loading-overlay').classList.add('hidden');
   renderEvent();
 }
 
