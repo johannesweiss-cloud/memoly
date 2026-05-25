@@ -102,13 +102,8 @@ function pickImage(onFile) {
 function renderHero() {
   if (!currentEvent) return;
   $('#hero-tag-text').innerText = currentEvent.tag || '';
-  // The DB has a single title field; we keep the v0 split presentation by
-  // taking the subtitle as the italic highlight and the title as line 1.
-  $('#hero-title-line1').innerText = currentEvent.title || '';
-  $('#hero-title-highlight').innerText = currentEvent.subtitle || '';
-  $('#hero-sub-text').innerText = currentEvent.subtitle ? '' : '';
-  // Note: v0 had a separate "sub" field. The current schema folds that into
-  // subtitle. If we need a distinct subline later, the schema needs a column.
+  $('#hero-title').innerText = currentEvent.title || '';
+  $('#hero-sub-text').innerText = currentEvent.subtitle || '';
 }
 
 function renderMoments() {
@@ -118,8 +113,8 @@ function renderMoments() {
 
   if (moments.length === 0) {
     list.innerHTML = canEdit
-      ? `<div class="empty-state">Noch keine Dates — füge deinen ersten hinzu</div>`
-      : `<div class="empty-state">Noch keine Dates vorhanden</div>`;
+      ? `<div class="empty-state">Noch keine Aktivitäten — füge deine erste hinzu</div>`
+      : `<div class="empty-state">Noch keine Aktivitäten vorhanden</div>`;
     return;
   }
 
@@ -142,13 +137,13 @@ function renderMoments() {
           : '');
 
     const deleteBtnHTML = canEdit
-      ? `<button class="date-delete-btn" data-delete-id="${m.id}">Date löschen</button>`
+      ? `<button class="date-delete-btn" data-delete-id="${m.id}">Aktivität löschen</button>`
       : '';
 
     card.innerHTML = `
       <div class="card-header" data-toggle="${m.id}">
         <div class="card-header-left">
-          <div class="card-num">Date ${String(i + 1).padStart(2, '0')}</div>
+          <div class="card-num">Aktivität ${String(i + 1).padStart(2, '0')}</div>
           <div class="card-title">${esc(m.title)}</div>
           <div class="card-desc-preview">${esc(m.description)}</div>
         </div>
@@ -255,17 +250,15 @@ function renderEvent() {
 // ─── Setup modal (create or edit event metadata) ───────────────────
 function openSetupModal() {
   if (setupMode === 'edit' && currentEvent) {
-    $('#setup-tag').value = currentEvent.tag || '';
-    $('#setup-title1').value = currentEvent.title || '';
-    $('#setup-title-highlight').value = currentEvent.subtitle || '';
-    $('#setup-sub').value = '';
+    $('#setup-title').value = currentEvent.title || '';
+    $('#setup-location').value = currentEvent.subtitle || '';
+    $('#setup-date').value = currentEvent.tag || '';
     $('#setup-save-btn').textContent = 'Speichern';
   } else {
     setupMode = 'create';
-    $('#setup-tag').value = '';
-    $('#setup-title1').value = '';
-    $('#setup-title-highlight').value = '';
-    $('#setup-sub').value = '';
+    $('#setup-title').value = '';
+    $('#setup-location').value = '';
+    $('#setup-date').value = '';
     $('#setup-save-btn').textContent = 'Event erstellen';
   }
   $('#setup-modal').classList.remove('hidden');
@@ -276,12 +269,12 @@ function closeSetupModal() {
 }
 
 async function submitSetupModal() {
-  const tag = $('#setup-tag').value.trim();
-  const title = $('#setup-title1').value.trim();
-  const subtitle = $('#setup-title-highlight').value.trim();
+  const title = $('#setup-title').value.trim();
+  const subtitle = $('#setup-location').value.trim();
+  const tag = $('#setup-date').value.trim();
 
   if (!title) {
-    $('#setup-title1').focus();
+    $('#setup-title').focus();
     return;
   }
 
@@ -340,12 +333,12 @@ async function submitAddModal() {
     moments.push(moment);
     renderMoments();
     closeAddModal();
-    showToast('Date hinzugefügt ✓');
+    showToast('Aktivität hinzugefügt ✓');
     setTimeout(() =>
       $('#date-list').lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
   } catch (e) {
     console.error(e);
-    showToast('Konnte Date nicht speichern');
+    showToast('Konnte Aktivität nicht speichern');
   }
 }
 
@@ -372,12 +365,12 @@ function triggerMomentImageUpload(momentId) {
 }
 
 async function handleDeleteMoment(id) {
-  if (!confirm('Dieses Date wirklich löschen?')) return;
+  if (!confirm('Diese Aktivität wirklich löschen?')) return;
   try {
     await deleteMoment(id);
     moments = moments.filter(m => m.id !== id);
     renderMoments();
-    showToast('Date gelöscht ✓');
+    showToast('Aktivität gelöscht ✓');
   } catch (e) {
     console.error(e);
     showToast('Konnte nicht löschen');
@@ -422,235 +415,373 @@ async function handleDeleteExtra(id) {
 }
 
 // ─── PDF Export ────────────────────────────────────────────────────
-async function exportPDF() {
+async function exportPDF(theme = 'modern') {
   showToast('PDF wird erstellt…');
 
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  try {
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
-  const EXTRA_SLOT_BG = '#f5f5f3';
-  const EXTRA_SLOT_BG_RGB = [245, 245, 243];
+    // Theme settings mapping
+    const styles = {
+      modern: {
+        fontMain: 'helvetica',
+        fontTitle: 'helvetica',
+        titleStyle: 'bold',
+        numStyle: 'bold',
+        descStyle: 'normal',
+        textColor: [28, 26, 23],
+        textMuted: [142, 138, 130],
+        bgFill: null, // White
+        dividerColor: [233, 233, 228],
+        cornerRadius: 6,
+        polaroid: false,
+        useLine: true,
+        headerAlign: 'center'
+      },
+      romantic: {
+        fontMain: 'times',
+        fontTitle: 'times',
+        titleStyle: 'bold',
+        numStyle: 'italic',
+        descStyle: 'normal',
+        textColor: [37, 32, 27],
+        textMuted: [94, 86, 77],
+        bgFill: [251, 250, 245], // Soft cream ivory
+        dividerColor: [230, 218, 196],
+        cornerRadius: 8,
+        polaroid: false,
+        useLine: true,
+        headerAlign: 'center'
+      },
+      scrapbook: {
+        fontMain: 'courier',
+        fontTitle: 'courier',
+        titleStyle: 'bold',
+        numStyle: 'normal',
+        descStyle: 'normal',
+        textColor: [34, 34, 34],
+        textMuted: [68, 68, 68],
+        bgFill: [243, 235, 217], // Sand
+        dividerColor: null, // No dividers
+        cornerRadius: 0,
+        polaroid: true,
+        useLine: false,
+        headerAlign: 'center'
+      }
+    };
 
-  const PW = 210, PH = 297;
-  const ML = 14, MR = 14, MT = 14;
-  const CW = PW - ML - MR;
+    const currentStyle = styles[theme] || styles.modern;
 
-  const IMG_COL = 78;
-  const GAP = 8;
-  const TEXT_COL = CW - IMG_COL - GAP;
+    const EXTRA_SLOT_BG = theme === 'scrapbook' ? '#ffffff' : '#f5f5f3';
+    const EXTRA_SLOT_BG_RGB = theme === 'scrapbook' ? [255, 255, 255] : [245, 245, 243];
 
-  let y = MT;
+    const PW = 210, PH = 297;
+    const ML = 14, MR = 14, MT = 14;
+    const CW = PW - ML - MR;
 
-  function loadImg(src) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = src;
-    });
-  }
+    const IMG_COL = 78;
+    const GAP = 8;
+    const TEXT_COL = CW - IMG_COL - GAP;
 
-  function getRoundedImgData(imgEl, w_mm, h_mm, r_mm = 2, bgColor = '#ffffff') {
-    const canvas = document.createElement('canvas');
-    let cw = imgEl.naturalWidth;
-    let ch = imgEl.naturalHeight;
-    const MAX = 1200;
-    if (cw > MAX || ch > MAX) {
-      const r = Math.max(cw / MAX, ch / MAX);
-      cw = Math.round(cw / r);
-      ch = Math.round(ch / r);
+    let y = MT;
+
+    function loadImg(src) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      });
     }
-    canvas.width = cw;
-    canvas.height = ch;
-    const ctx = canvas.getContext('2d');
 
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, cw, ch);
+    function getRoundedImgData(imgEl, w_mm, h_mm, r_mm = 2, bgColor = '#ffffff') {
+      const canvas = document.createElement('canvas');
+      let cw = imgEl.naturalWidth;
+      let ch = imgEl.naturalHeight;
+      const MAX = 1200;
+      if (cw > MAX || ch > MAX) {
+        const r = Math.max(cw / MAX, ch / MAX);
+        cw = Math.round(cw / r);
+        ch = Math.round(ch / r);
+      }
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext('2d');
 
-    const radiusPx = cw * (r_mm / w_mm);
-    ctx.beginPath();
-    ctx.moveTo(radiusPx, 0);
-    ctx.lineTo(cw - radiusPx, 0);
-    ctx.quadraticCurveTo(cw, 0, cw, radiusPx);
-    ctx.lineTo(cw, ch - radiusPx);
-    ctx.quadraticCurveTo(cw, ch, cw - radiusPx, ch);
-    ctx.lineTo(radiusPx, ch);
-    ctx.quadraticCurveTo(0, ch, 0, ch - radiusPx);
-    ctx.lineTo(0, radiusPx);
-    ctx.quadraticCurveTo(0, 0, radiusPx, 0);
-    ctx.closePath();
-    ctx.clip();
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, cw, ch);
 
-    ctx.drawImage(imgEl, 0, 0, cw, ch);
-    return canvas.toDataURL('image/jpeg', 0.95);
-  }
+      if (r_mm > 0) {
+        const radiusPx = cw * (r_mm / w_mm);
+        ctx.beginPath();
+        ctx.moveTo(radiusPx, 0);
+        ctx.lineTo(cw - radiusPx, 0);
+        ctx.quadraticCurveTo(cw, 0, cw, radiusPx);
+        ctx.lineTo(cw, ch - radiusPx);
+        ctx.quadraticCurveTo(cw, ch, cw - radiusPx, ch);
+        ctx.lineTo(radiusPx, ch);
+        ctx.quadraticCurveTo(0, ch, 0, ch - radiusPx);
+        ctx.lineTo(0, radiusPx);
+        ctx.quadraticCurveTo(0, 0, radiusPx, 0);
+        ctx.closePath();
+        ctx.clip();
+      }
 
-  function ensureSpace(needed) {
-    if (y + needed > PH - 12) {
-      pdf.addPage();
-      y = MT;
+      ctx.drawImage(imgEl, 0, 0, cw, ch);
+      return canvas.toDataURL('image/jpeg', 0.95);
     }
-  }
 
-  // Header
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7.5);
-  pdf.setTextColor(160, 160, 155);
-  pdf.setCharSpace(2);
-  const tagText = $('#hero-tag-text').innerText || '';
-  pdf.text(tagText.toUpperCase(), PW / 2, y + 5, { align: 'center' });
-  pdf.setCharSpace(0);
-  y += 10;
-
-  pdf.setFont('times', 'bold');
-  pdf.setFontSize(22);
-  pdf.setTextColor(17, 17, 17);
-  const title1 = $('#hero-title-line1').innerText || '';
-  const titleH = $('#hero-title-highlight').innerText || '';
-  pdf.text(`${title1} ${titleH}`.trim(), PW / 2, y + 7, { align: 'center' });
-  y += 13;
-
-  pdf.setFont('times', 'italic');
-  pdf.setFontSize(10.5);
-  pdf.setTextColor(120, 120, 115);
-  const subText = $('#hero-sub-text').innerText || '';
-  pdf.text(subText, PW / 2, y + 4, { align: 'center' });
-  y += 9;
-
-  pdf.setDrawColor(215, 215, 210);
-  pdf.setLineWidth(0.25);
-  pdf.line(ML, y, PW - MR, y);
-  y += 7;
-
-  // Date rows
-  for (let i = 0; i < moments.length; i++) {
-    const m = moments[i];
-    const rev = i % 2 === 1;
-
-    let imgDrawH = 55;
-    let imgEl = null;
-
-    if (m.image_path) {
-      imgEl = await loadImg(getPublicImageUrl(m.image_path));
-      if (imgEl) {
-        const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
-        imgDrawH = IMG_COL / ratio;
-        if (imgDrawH > 120) imgDrawH = 120;
+    function fillPageBackground() {
+      if (currentStyle.bgFill) {
+        pdf.setFillColor(...currentStyle.bgFill);
+        pdf.rect(0, 0, PW, PH, 'F');
       }
     }
 
-    const minTextH = 50;
-    const rowH = Math.max(imgDrawH, minTextH);
-    ensureSpace(rowH + 10);
+    // Draw background for first page
+    fillPageBackground();
 
-    const imgX = rev ? ML + TEXT_COL + GAP : ML;
-    const textX = rev ? ML : ML + IMG_COL + GAP;
-
-    if (imgEl) {
-      const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
-      let drawW = IMG_COL;
-      let drawH = drawW / ratio;
-      if (drawH > 120) { drawH = 120; drawW = drawH * ratio; }
-      const offsetX = imgX + (IMG_COL - drawW) / 2;
-      const roundedSrc = getRoundedImgData(imgEl, drawW, drawH, 6, '#ffffff');
-      pdf.addImage(roundedSrc, 'JPEG', offsetX, y, drawW, drawH, '', 'FAST');
-    } else {
-      pdf.setFillColor(242, 242, 240);
-      pdf.roundedRect(imgX, y, IMG_COL, imgDrawH, 6, 6, 'F');
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(6.5);
-      pdf.setTextColor(185, 185, 180);
-      pdf.text('KEIN FOTO', imgX + IMG_COL / 2, y + imgDrawH / 2, { align: 'center' });
+    function ensureSpace(needed) {
+      if (y + needed > PH - 12) {
+        pdf.addPage();
+        fillPageBackground();
+        y = MT;
+      }
     }
 
-    const textTopOffset = 2;
+    const isLeft = currentStyle.headerAlign === 'left';
+    const headerX = isLeft ? ML : PW / 2;
+    const headerOpts = isLeft ? {} : { align: 'center' };
 
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(6.5);
-    pdf.setTextColor(165, 165, 158);
-    pdf.setCharSpace(1.8);
-    pdf.text(`DATE ${String(i + 1).padStart(2, '0')}`, textX, y + textTopOffset + 5);
-    pdf.setCharSpace(0);
+    // Header
+    pdf.setFont(currentStyle.fontMain, 'normal');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(...currentStyle.textMuted);
+    const tagText = $('#hero-tag-text').innerText || '';
+    const spacedTagText = tagText.toUpperCase().split('').join('  ');
+    pdf.text(spacedTagText, headerX, y + 4, headerOpts);
+    y += 9;
 
-    pdf.setFont('times', 'bold');
-    pdf.setFontSize(17);
-    pdf.setTextColor(17, 17, 17);
-    const titleLines = pdf.splitTextToSize(m.title, TEXT_COL);
-    pdf.text(titleLines, textX, y + textTopOffset + 13);
-    const titleBlockH = titleLines.length * 6.5;
+    pdf.setFont(currentStyle.fontTitle, currentStyle.titleStyle);
+    pdf.setFontSize(22);
+    pdf.setTextColor(...currentStyle.textColor);
+    const title = $('#hero-title').innerText || '';
+    pdf.text(title, headerX, y + 6, headerOpts);
+    y += 12;
 
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    pdf.setTextColor(105, 105, 98);
-    const descLines = pdf.splitTextToSize(m.description || '', TEXT_COL);
-    pdf.text(descLines, textX, y + textTopOffset + 13 + titleBlockH + 3);
-
-    y += rowH + 6;
-
-    if (i < moments.length - 1) {
-      ensureSpace(4);
-      pdf.setDrawColor(228, 228, 223);
-      pdf.setLineWidth(0.2);
-      pdf.line(ML, y, PW - MR, y);
-      y += 6;
-    }
-  }
-
-  // Extras
-  if (extras.length > 0) {
-    const COLS = 3;
-    const GAP_E = 5;
-    const THUMB = (CW - GAP_E * (COLS - 1)) / COLS;
-
-    y += 4;
-    ensureSpace(20 + THUMB);
-
-    pdf.setDrawColor(215, 215, 210);
-    pdf.setLineWidth(0.25);
-    pdf.line(ML, y, PW - MR, y);
-    y += 6;
-
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(6.5);
-    pdf.setTextColor(165, 165, 158);
-    pdf.setCharSpace(1.8);
-    pdf.text('WEITERE BILDER', ML, y + 3);
-    pdf.setCharSpace(0);
+    pdf.setFont(currentStyle.fontTitle, theme === 'romantic' ? 'italic' : 'normal');
+    pdf.setFontSize(10.5);
+    pdf.setTextColor(...currentStyle.textMuted);
+    const subText = $('#hero-sub-text').innerText || '';
+    pdf.text(subText, headerX, y + 3, headerOpts);
     y += 8;
 
-    for (let i = 0; i < extras.length; i++) {
-      const col = i % COLS;
-      if (col === 0 && i > 0) {
-        y += THUMB + GAP_E;
-        ensureSpace(THUMB + GAP_E);
-      }
-      const ex_x = ML + col * (THUMB + GAP_E);
+    if (currentStyle.useLine && currentStyle.dividerColor) {
+      pdf.setDrawColor(...currentStyle.dividerColor);
+      pdf.setLineWidth(0.25);
+      pdf.line(ML, y, PW - MR, y);
+      y += 7;
+    } else {
+      y += 4;
+    }
 
-      const url = extras[i].image_path ? getPublicImageUrl(extras[i].image_path) : null;
-      const imgEl = url ? await loadImg(url) : null;
+    // Date rows
+    for (let i = 0; i < moments.length; i++) {
+      const m = moments[i];
+      const rev = i % 2 === 1;
+
+      let imgDrawH = 55;
+      let imgEl = null;
+
+      if (m.image_path) {
+        imgEl = await loadImg(getPublicImageUrl(m.image_path));
+        if (imgEl) {
+          const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+          imgDrawH = IMG_COL / ratio;
+          if (imgDrawH > 120) imgDrawH = 120;
+        }
+      }
+
+      const minTextH = 50;
+      const addedPolaroidH = currentStyle.polaroid ? 16 : 0;
+      const rowH = Math.max(imgDrawH + addedPolaroidH, minTextH);
+      ensureSpace(rowH + 10);
+
+      const imgX = rev ? ML + TEXT_COL + GAP : ML;
+      const textX = rev ? ML : ML + IMG_COL + GAP;
 
       if (imgEl) {
         const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
-        let dw = THUMB, dh = THUMB;
-        if (ratio > 1) dh = dw / ratio; else dw = dh * ratio;
-        const ox = ex_x + (THUMB - dw) / 2;
-        const oy = y + (THUMB - dh) / 2;
-        pdf.setFillColor(...EXTRA_SLOT_BG_RGB);
-        pdf.roundedRect(ex_x, y, THUMB, THUMB, 6, 6, 'F');
-        const roundedSrc = getRoundedImgData(imgEl, dw, dh, 6, EXTRA_SLOT_BG);
-        pdf.addImage(roundedSrc, 'JPEG', ox, oy, dw, dh, '', 'FAST');
+        let drawW = IMG_COL;
+        let drawH = drawW / ratio;
+        if (drawH > 120) { drawH = 120; drawW = drawH * ratio; }
+        const offsetX = imgX + (IMG_COL - drawW) / 2;
+
+        if (currentStyle.polaroid) {
+          // Polaroid Frame: White backing card with fine border
+          pdf.setFillColor(255, 255, 255);
+          pdf.setDrawColor(215, 205, 185);
+          pdf.setLineWidth(0.3);
+          pdf.roundedRect(offsetX - 3, y - 3, drawW + 6, drawH + 16, 2, 2, 'FD');
+          
+          const roundedSrc = getRoundedImgData(imgEl, drawW, drawH, 0, '#ffffff');
+          pdf.addImage(roundedSrc, 'JPEG', offsetX, y, drawW, drawH, '', 'FAST');
+        } else {
+          const bgHex = theme === 'romantic' ? '#fbfaf5' : '#ffffff';
+          const roundedSrc = getRoundedImgData(imgEl, drawW, drawH, currentStyle.cornerRadius, bgHex);
+          pdf.addImage(roundedSrc, 'JPEG', offsetX, y, drawW, drawH, '', 'FAST');
+        }
       } else {
-        pdf.setFillColor(242, 242, 240);
-        pdf.roundedRect(ex_x, y, THUMB, THUMB, 6, 6, 'F');
+        if (currentStyle.polaroid) {
+          pdf.setFillColor(255, 255, 255);
+          pdf.setDrawColor(215, 205, 185);
+          pdf.setLineWidth(0.3);
+          pdf.roundedRect(imgX - 3, y - 3, IMG_COL + 6, imgDrawH + 16, 2, 2, 'FD');
+          pdf.setFont(currentStyle.fontMain, 'normal');
+          pdf.setFontSize(8);
+          pdf.setTextColor(180, 170, 150);
+          pdf.text('KEIN FOTO', imgX + IMG_COL / 2, y + imgDrawH / 2, { align: 'center' });
+        } else {
+          const fillRgb = theme === 'romantic' ? [242, 238, 227] : [242, 242, 240];
+          pdf.setFillColor(...fillRgb);
+          pdf.roundedRect(imgX, y, IMG_COL, imgDrawH, currentStyle.cornerRadius || 2, currentStyle.cornerRadius || 2, 'F');
+          pdf.setFont(currentStyle.fontMain, 'normal');
+          pdf.setFontSize(6.5);
+          pdf.setTextColor(185, 185, 180);
+          pdf.text('KEIN FOTO', imgX + IMG_COL / 2, y + imgDrawH / 2, { align: 'center' });
+        }
+      }
+
+      const textTopOffset = 2;
+
+      pdf.setFont(currentStyle.fontMain, currentStyle.numStyle);
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(...currentStyle.textMuted);
+      
+      if (theme === 'romantic') {
+        pdf.text(`Aktivität ${String(i + 1).padStart(2, '0')}`, textX, y + textTopOffset + 5);
+      } else if (theme === 'scrapbook') {
+        pdf.text(`[ AKTIVITÄT ${String(i + 1).padStart(2, '0')} ]`, textX, y + textTopOffset + 5);
+      } else {
+        pdf.setCharSpace(1.8);
+        pdf.text(`AKTIVITÄT ${String(i + 1).padStart(2, '0')}`, textX, y + textTopOffset + 5);
+        pdf.setCharSpace(0);
+      }
+
+      pdf.setFont(currentStyle.fontTitle, currentStyle.titleStyle);
+      pdf.setFontSize(theme === 'romantic' ? 19 : 17);
+      pdf.setTextColor(...currentStyle.textColor);
+      const titleLines = pdf.splitTextToSize(m.title, TEXT_COL);
+      pdf.text(titleLines, textX, y + textTopOffset + 13);
+      const titleBlockH = titleLines.length * (theme === 'romantic' ? 7.5 : 6.5);
+
+      pdf.setFont(currentStyle.fontMain, currentStyle.descStyle);
+      pdf.setFontSize(theme === 'romantic' ? 10 : 9);
+      pdf.setTextColor(...(theme === 'scrapbook' ? [68, 68, 68] : [105, 105, 98]));
+      const descLines = pdf.splitTextToSize(m.description || '', TEXT_COL);
+      pdf.text(descLines, textX, y + textTopOffset + 13 + titleBlockH + 3);
+
+      y += rowH + 6;
+
+      if (i < moments.length - 1) {
+        ensureSpace(4);
+        if (currentStyle.useLine && currentStyle.dividerColor) {
+          pdf.setDrawColor(...currentStyle.dividerColor);
+          pdf.setLineWidth(0.2);
+          pdf.line(ML, y, PW - MR, y);
+          y += 6;
+        } else {
+          y += 4;
+        }
       }
     }
-    y += THUMB + GAP_E;
-  }
 
-  const rawTag = $('#hero-tag-text').innerText || 'erinnerung';
-  const filename = rawTag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'erinnerung';
-  pdf.save(filename + '.pdf');
-  showToast('PDF gespeichert ✓');
+    // Extras
+    if (extras.length > 0) {
+      const COLS = 3;
+      const GAP_E = 5;
+      const THUMB = (CW - GAP_E * (COLS - 1)) / COLS;
+
+      y += 4;
+      ensureSpace(20 + THUMB);
+
+      if (currentStyle.useLine && currentStyle.dividerColor) {
+        pdf.setDrawColor(...currentStyle.dividerColor);
+        pdf.setLineWidth(0.25);
+        pdf.line(ML, y, PW - MR, y);
+        y += 6;
+      } else {
+        y += 4;
+      }
+
+      pdf.setFont(currentStyle.fontMain, 'normal');
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(...currentStyle.textMuted);
+      
+      if (theme === 'romantic') {
+        pdf.text('Weitere Bilder', ML, y + 3);
+      } else if (theme === 'scrapbook') {
+        pdf.text('* WEITERE BILDER *', ML, y + 3);
+      } else {
+        pdf.setCharSpace(1.8);
+        pdf.text('WEITERE BILDER', ML, y + 3);
+        pdf.setCharSpace(0);
+      }
+      y += 8;
+
+      for (let i = 0; i < extras.length; i++) {
+        const col = i % COLS;
+        if (col === 0 && i > 0) {
+          y += THUMB + GAP_E;
+          ensureSpace(THUMB + GAP_E);
+        }
+        const ex_x = ML + col * (THUMB + GAP_E);
+
+        const url = extras[i].image_path ? getPublicImageUrl(extras[i].image_path) : null;
+        const imgEl = url ? await loadImg(url) : null;
+
+        if (imgEl) {
+          const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+          let dw = THUMB, dh = THUMB;
+          if (ratio > 1) dh = dw / ratio; else dw = dh * ratio;
+          const ox = ex_x + (THUMB - dw) / 2;
+          const oy = y + (THUMB - dh) / 2;
+
+          if (currentStyle.polaroid) {
+            pdf.setFillColor(255, 255, 255);
+            pdf.setDrawColor(215, 205, 185);
+            pdf.setLineWidth(0.25);
+            pdf.roundedRect(ex_x - 1.5, y - 1.5, THUMB + 3, THUMB + 6, 1, 1, 'FD');
+            
+            const roundedSrc = getRoundedImgData(imgEl, dw, dh, 0, '#ffffff');
+            pdf.addImage(roundedSrc, 'JPEG', ox, oy + 0.5, dw, dh, '', 'FAST');
+          } else {
+            pdf.setFillColor(...EXTRA_SLOT_BG_RGB);
+            const bgHex = theme === 'romantic' ? '#fbfaf5' : EXTRA_SLOT_BG;
+            const cornerR = currentStyle.cornerRadius ? Math.min(4, currentStyle.cornerRadius) : 6;
+            pdf.roundedRect(ex_x, y, THUMB, THUMB, cornerR, cornerR, 'F');
+            const roundedSrc = getRoundedImgData(imgEl, dw, dh, cornerR, bgHex);
+            pdf.addImage(roundedSrc, 'JPEG', ox, oy, dw, dh, '', 'FAST');
+          }
+        } else {
+          const fillRgb = theme === 'romantic' ? [242, 238, 227] : [242, 242, 240];
+          pdf.setFillColor(...fillRgb);
+          const cornerR = currentStyle.cornerRadius ? Math.min(4, currentStyle.cornerRadius) : 6;
+          pdf.roundedRect(ex_x, y, THUMB, THUMB, cornerR, cornerR, 'F');
+        }
+      }
+      y += THUMB + GAP_E;
+    }
+
+    const rawTag = $('#hero-tag-text').innerText || 'erinnerung';
+    const filename = rawTag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'erinnerung';
+    pdf.save(filename + '.pdf');
+    showToast('PDF gespeichert ✓');
+  } catch (e) {
+    console.error('PDF Export Error:', e);
+    showToast('Fehler beim PDF-Export: ' + e.message);
+  }
 }
 
 // ─── Event wiring ──────────────────────────────────────────────────
@@ -659,7 +790,33 @@ $('.setup-btn').addEventListener('click', () => {
   openSetupModal();
 });
 $('.add-btn').addEventListener('click', openAddModal);
-$('.export-btn').addEventListener('click', exportPDF);
+// Export Modal wiring
+function openExportModal() {
+  $('#export-modal').classList.remove('hidden');
+}
+function closeExportModal() {
+  $('#export-modal').classList.add('hidden');
+}
+$('.export-btn').addEventListener('click', openExportModal);
+$('#export-cancel-btn').addEventListener('click', closeExportModal);
+$('#export-modal').addEventListener('click', function (e) { if (e.target === this) closeExportModal(); });
+
+// Selection handler for export themes
+document.querySelectorAll('.theme-option').forEach(card => {
+  card.addEventListener('click', function() {
+    document.querySelectorAll('.theme-option').forEach(c => c.classList.remove('selected'));
+    this.classList.add('selected');
+    const radio = this.querySelector('input[type="radio"]');
+    if (radio) radio.checked = true;
+  });
+});
+
+$('#export-confirm-btn').addEventListener('click', () => {
+  const selectedTheme = document.querySelector('input[name="export-theme"]:checked')?.value || 'modern';
+  closeExportModal();
+  exportPDF(selectedTheme);
+});
+
 $('#modal-cancel-btn').addEventListener('click', closeAddModal);
 $('#modal-save-btn').addEventListener('click', submitAddModal);
 $('#setup-cancel-btn').addEventListener('click', closeSetupModal);
