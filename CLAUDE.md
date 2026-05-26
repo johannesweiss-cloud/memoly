@@ -88,7 +88,7 @@ The goal is a real product that can be shared, collaborated on, and monetized.
 - ✅ Supabase backend (DB + Storage) wired into the frontend
 - ✅ Shareable URL via `#/event/<id>` (hash route, not server route)
 - ✅ localforage and URL-hash sharing logic removed
-- ⏳ Paywall before PDF export (Lemon Squeezy integration) — **not yet implemented**
+- ✅ Paywall before PDF export (Lemon Squeezy integration) — **frontend + Edge Function done; needs LS account setup to go live**
 
 **Why Lemon Squeezy instead of Stripe:**
 Lemon Squeezy is a Merchant of Record — they are legally the seller, the developer is just the supplier. This matters because:
@@ -119,35 +119,69 @@ This is the first project with a real monetization attempt. Previous project was
 - Push back on scope creep. If a feature isn't needed for the first paying customer, say so.
 - The emotional quality of the product matters. Design and UX decisions should reflect that this is a product people use for meaningful moments.
 
-## Status as of 2026-05-25
+## Last Session (2026-05-25)
 
-### Was in der Session vom 2026-05-25 gebaut wurde
+### Was gebaut / geändert wurde
 
-UX-Polishing-Runde abgeschlossen. Alle Änderungen sind in `index.html` und `src/main.js`.
+Lemon Squeezy Paywall vollständig implementiert (Frontend + Supabase Edge Function). Außerdem PDF-Themes und Titelseite mit Playwright verifiziert.
 
-**Gebaut:**
-- **Loading-State:** Spinner-Overlay (`#loading-overlay`) erscheint beim Laden einer Event-URL, verschwindet nach Daten-Fetch. Auf Home nicht gezeigt (Modal öffnet sofort). Entscheidung: erstmal simpler Spinner, Skeleton-Cards kommen später (steht im Backlog).
-- **Error-State:** Fullscreen-Overlay (`#error-state`) bei ungültiger oder gelöschter Event-UUID (wenn Supabase einen Fehler wirft, z.B. PGRST116). Zeigt „Event nicht gefunden" + Button zum Erstellen eines neuen Events.
-- **Copy-Link-Button:** Zweiter Button in der Bottom-Bar über dem Export-Button, sichtbar für alle auf einer Event-Seite (Edit und Read-only). Kopiert `window.location.href` via Clipboard API, zeigt kurz „Kopiert ✓" dann Reset. Entscheidung: für alle sichtbar, nicht nur Edit-Mode — ein Read-only-Betrachter soll den Link auch teilen können.
-- **Empty-States:** In `renderMoments()` — zeigt kontextabhängige Nachricht wenn `moments.length === 0` (Edit: „Füge deinen ersten Date hinzu", Read-only: „Noch keine Dates vorhanden").
-- **Extras-Sektion ausblenden:** `renderExtras()` blendet die ganze `.extra-section` aus wenn `extras.length === 0 && !canEdit`. Leere Sektion für Read-only-Besucher ergibt keinen Sinn.
-- **Bottom-Bar auf Home ausblenden:** `renderHome()` setzt `#bottom-bar` auf `display: none`. Export- und Share-Button gehören nicht auf die leere Home-Seite.
-- **Hardcoded Amsterdam-Text entfernt:** Hero-Spans in `index.html` sind jetzt leer by default. JS befüllt sie nach dem Laden.
+**PDF-Qualitätsprüfung (kein Code geändert):**
+- Alle drei PDF-Themes (Modern, Romantic, Scrapbook) mit Playwright exportiert und visuell verglichen — alle korrekt und deutlich unterschiedlich.
+- Titelseite (Deckblatt) war bereits implementiert und funktioniert korrekt: eigene A4-Seite pro Theme, mit passendem Hintergrund und Typografie.
+- Export-Modal mit Theme-Picker, Layout-Wahl und Deckblatt-Toggle bereits vorhanden.
+
+**Lemon Squeezy Paywall — neu implementiert:**
+
+*Frontend (`index.html`, `src/main.js`):*
+- `renderEvent()` setzt den Export-Button jetzt abhängig von `canEdit` und `is_paid`:
+  - `!canEdit` → Button ausgeblendet (Lesende sehen keinen Export-Button)
+  - `canEdit && !is_paid` → Amber-farbener Button „✦ Buch freischalten & exportieren" (Klasse `export-btn--locked`)
+  - `canEdit && is_paid` → Normaler dunkler Export-Button wie zuvor
+- Paywall-Modal (Bottom Sheet): ✦-Icon, Titel, Beschreibung, 4 Feature-Punkte mit Checkmarks, Amber-CTA „Jetzt freischalten — 3,99 €“, „Sicher & verschlüsselt · Lemon Squeezy“-Footer, „Vielleicht später“-Abbrechen.
+- `startCheckout()`: öffnet Lemon Squeezy Overlay via `window.LemonSqueezy.Url.Open(url)` (Fallback: `window.open`). URL enthält `event_id` als Custom-Data (`?checkout[custom][event_id]=...&embed=1`). Checkout-URL kommt aus `VITE_LS_CHECKOUT_URL`.
+- `pollForPayment()`: polling alle 2 Sekunden für max. 60 Sekunden auf `is_paid = true`. Wenn bestätigt: `renderEvent()` neu aufrufen + Export-Modal automatisch öffnen.
+- Lemon Squeezy JS (`https://app.lemonsqueezy.com/js/lemon.js`) als `defer`-Script eingebunden.
+- `.modal-sheet` bekommt `max-height: 88vh; overflow-y: auto` — verhindert dass tall Modals über die Viewport-Oberkante hinauswachsen.
+
+*Supabase Edge Function (`supabase/functions/lemon-webhook/index.ts`) — neu:*
+- Empfängt Webhook von Lemon Squeezy nach erfolgreicher Zahlung.
+- Verifiziert HMAC-SHA256-Signatur gegen `LEMON_WEBHOOK_SECRET`.
+- Ignoriert alle Events außer `order_created`.
+- Liest `meta.custom_data.event_id` und setzt `is_paid = true` via Service-Role-Key (umgeht RLS).
+- `SUPABASE_URL` und `SUPABASE_SERVICE_ROLE_KEY` werden von Supabase automatisch injiziert.
 
 **Entscheidungen:**
-- Copy-Link-Button sitzt in der Bottom-Bar (nicht im Hero), damit er prominent und immer erreichbar ist.
-- Error-State ist ein fixed Overlay mit z-index 800 (unter dem Loading-Overlay bei 900).
-- Loading-State bleibt vorerst ein simpler Spinner — kein Skeleton, kein Shimmer. Aufwand vs. Nutzen passt nicht für jetzt.
+- **Hard-Gate statt Wasserzeichen**: Nutzer hat 30–60 Minuten investiert → maximale Zahlungsbereitschaft genau vor dem Export. Kein Wasserzeichen nötig.
+- **Polling statt Supabase Realtime**: 5 Zeilen vs. vollständige Subscription-Verwaltung. Zuverlässiger bei Tab-Wechsel nach dem Checkout-Overlay.
+- **Kein Aktivitäten-Limit**: Limit schafft Reibung vor dem emotionalen Investment. Nur der Export wird gegattet.
+- **Export für Lesende ausgeblendet**: Nur der Ersteller (Edit-Token vorhanden) kann exportieren.
 
-### Status vor dieser Session (2026-05-17)
+**Probleme & Lösungen:**
+- Playwright-Test zeigte Modal bei `top: -372` → kein echter Bug, `scrollIntoView()` im Test hatte das Overlay verschoben. Ohne diesen Call erscheint das Modal korrekt bei `top: 322`.
 
-Alle Bugs #1–#11 aus `BUGS.md` erledigt. Reales Supabase-Projekt aufgesetzt, Schema applied, Bucket + drei Storage-Policies aktiv. `.env.local` lokal angelegt (gitignored). Vercel vorbereitet aber bewusst noch nicht deployed.
+**Files changed:**
+- `index.html` — Paywall-CSS, Paywall-Modal-HTML, LS-Script-Tag, `max-height` für `.modal-sheet`
+- `src/main.js` — `LS_CHECKOUT_URL` Env-Var, `renderEvent()` Button-State-Logik, `openPaywallModal/closePaywallModal`, `startCheckout`, `pollForPayment`, Event-Listener für Paywall-Buttons
+- `supabase/functions/lemon-webhook/index.ts` — neu
+- `.env.local` — Placeholder `VITE_LS_CHECKOUT_URL=` (muss nach LS-Setup befüllt werden)
 
-## Next steps (priorisiert)
+## Next Steps
 
-1. **Design-Polishing.** UX-Struktur steht, jetzt visuelle Qualität heben. Offen: was genau — beim Durchklicken identifizieren was stört (Typografie, Abstände, Mobile-Brüche, Hero-Wirkung).
-2. **Lemon Squeezy Paywall vor PDF-Export.** Skizze: PDF-Button durch „Bezahlen & Herunterladen" ersetzen wenn `is_paid = false`, LS-Checkout mit `event_id` als Custom-Data, Supabase Edge Function als Webhook-Empfänger der `is_paid = true` setzt. Account + Produkt-Setup bei Lemon Squeezy ist Voraussetzung (Klick-Arbeit, nicht Code). Spalte `is_paid` existiert bereits im Schema.
-3. **Vercel-Deploy + Smoke-Test gegen Live-URL.** Repo importieren, Env-Vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) für Production/Preview/Development eintragen. Erst deployen wenn Design + Paywall fertig.
+1. **Lemon Squeezy Account + Produkt einrichten (Klick-Arbeit):**
+   - Account unter app.lemonsqueezy.com anlegen
+   - Store erstellen, Produkt „memoly Premium Export“ (3,99 €, einmalig) anlegen → Variant-ID notieren
+   - Buy-URL in `.env.local` ein tragen: `VITE_LS_CHECKOUT_URL=https://dein-store.lemonsqueezy.com/buy/VARIANT_ID`
+
+2. **Edge Function deployen + Webhook konfigurieren:**
+   ```
+   supabase functions deploy lemon-webhook
+   supabase secrets set LEMON_WEBHOOK_SECRET=dein-webhook-secret
+   ```
+   Im LS-Dashboard Webhook anlegen: URL `https://vddmjeihfsmibtcwxaaa.supabase.co/functions/v1/lemon-webhook`, Event `order_created`, Secret eintragen.
+
+3. **End-to-End-Test mit echter Zahlung** (LS hat Test-Mode): Paywall-Flow durchspielen, prüfen dass `is_paid = true` in Supabase gesetzt wird und Export freigeschaltet wird.
+
+4. **Vercel-Deploy:** Repo importieren, Env-Vars `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_LS_CHECKOUT_URL` für Production/Preview/Development eintragen.
 
 ## Backlog (nicht release-blockierend)
 

@@ -16,6 +16,8 @@ import {
   getPublicImageUrl,
 } from './api.js';
 
+const LS_CHECKOUT_URL = import.meta.env.VITE_LS_CHECKOUT_URL ?? '';
+
 // ─── State ──────────────────────────────────────────────────────────
 let currentEvent = null;
 let moments = [];
@@ -241,6 +243,20 @@ function renderHome() {
 function renderEvent() {
   $('#bottom-bar').style.display = '';
   $('#share-btn').classList.remove('hidden');
+
+  const exportBtn = $('.export-btn');
+  if (!canEdit) {
+    exportBtn.style.display = 'none';
+  } else if (currentEvent.is_paid) {
+    exportBtn.textContent = 'Als Erinnerung exportieren ↓';
+    exportBtn.classList.remove('export-btn--locked');
+    exportBtn.style.display = '';
+  } else {
+    exportBtn.textContent = '✦ Buch freischalten & exportieren';
+    exportBtn.classList.add('export-btn--locked');
+    exportBtn.style.display = '';
+  }
+
   renderHero();
   renderEditAffordances();
   renderMoments();
@@ -415,7 +431,7 @@ async function handleDeleteExtra(id) {
 }
 
 // ─── PDF Export ────────────────────────────────────────────────────
-async function exportPDF(theme = 'modern') {
+async function exportPDF(theme = 'modern', layout = 'classic', useCover = true) {
   showToast('PDF wird erstellt…');
 
   try {
@@ -497,14 +513,29 @@ async function exportPDF(theme = 'modern') {
 
     function getRoundedImgData(imgEl, w_mm, h_mm, r_mm = 2, bgColor = '#ffffff') {
       const canvas = document.createElement('canvas');
-      let cw = imgEl.naturalWidth;
-      let ch = imgEl.naturalHeight;
+      const targetRatio = w_mm / h_mm;
+      
+      let sx = 0, sy = 0, sw = imgEl.naturalWidth, sh = imgEl.naturalHeight;
+      const srcRatio = sw / sh;
+      if (srcRatio > targetRatio) {
+        // Source is wider than target -> crop sides (horizontal crop)
+        sw = sh * targetRatio;
+        sx = (imgEl.naturalWidth - sw) / 2;
+      } else {
+        // Source is taller than target -> crop top/bottom (vertical crop)
+        sh = sw / targetRatio;
+        sy = (imgEl.naturalHeight - sh) / 2;
+      }
+
+      let cw = Math.round(sw);
+      let ch = Math.round(sh);
       const MAX = 1200;
       if (cw > MAX || ch > MAX) {
-        const r = Math.max(cw / MAX, ch / MAX);
-        cw = Math.round(cw / r);
-        ch = Math.round(ch / r);
+        const scale = Math.max(cw / MAX, ch / MAX);
+        cw = Math.round(cw / scale);
+        ch = Math.round(ch / scale);
       }
+
       canvas.width = cw;
       canvas.height = ch;
       const ctx = canvas.getContext('2d');
@@ -528,7 +559,7 @@ async function exportPDF(theme = 'modern') {
         ctx.clip();
       }
 
-      ctx.drawImage(imgEl, 0, 0, cw, ch);
+      ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, cw, ch);
       return canvas.toDataURL('image/jpeg', 0.95);
     }
 
@@ -538,9 +569,6 @@ async function exportPDF(theme = 'modern') {
         pdf.rect(0, 0, PW, PH, 'F');
       }
     }
-
-    // Draw background for first page
-    fillPageBackground();
 
     function ensureSpace(needed) {
       if (y + needed > PH - 12) {
@@ -554,145 +582,366 @@ async function exportPDF(theme = 'modern') {
     const headerX = isLeft ? ML : PW / 2;
     const headerOpts = isLeft ? {} : { align: 'center' };
 
-    // Header
-    pdf.setFont(currentStyle.fontMain, 'normal');
-    pdf.setFontSize(7.5);
-    pdf.setTextColor(...currentStyle.textMuted);
-    const tagText = $('#hero-tag-text').innerText || '';
-    const spacedTagText = tagText.toUpperCase().split('').join('  ');
-    pdf.text(spacedTagText, headerX, y + 4, headerOpts);
-    y += 9;
+    // Layout configuration: Cover Page or Standard Header
+    if (useCover) {
+      // Cover Page (Deckblatt)
+      fillPageBackground();
 
-    pdf.setFont(currentStyle.fontTitle, currentStyle.titleStyle);
-    pdf.setFontSize(22);
-    pdf.setTextColor(...currentStyle.textColor);
-    const title = $('#hero-title').innerText || '';
-    pdf.text(title, headerX, y + 6, headerOpts);
-    y += 12;
+      // Clean decorative border frame on cover
+      pdf.setDrawColor(...(currentStyle.dividerColor || [215, 215, 210]));
+      pdf.setLineWidth(0.3);
+      pdf.roundedRect(10, 10, PW - 20, PH - 20, 4, 4, 'D');
 
-    pdf.setFont(currentStyle.fontTitle, theme === 'romantic' ? 'italic' : 'normal');
-    pdf.setFontSize(10.5);
-    pdf.setTextColor(...currentStyle.textMuted);
-    const subText = $('#hero-sub-text').innerText || '';
-    pdf.text(subText, headerX, y + 3, headerOpts);
-    y += 8;
-
-    if (currentStyle.useLine && currentStyle.dividerColor) {
-      pdf.setDrawColor(...currentStyle.dividerColor);
-      pdf.setLineWidth(0.25);
-      pdf.line(ML, y, PW - MR, y);
-      y += 7;
-    } else {
-      y += 4;
-    }
-
-    // Date rows
-    for (let i = 0; i < moments.length; i++) {
-      const m = moments[i];
-      const rev = i % 2 === 1;
-
-      let imgDrawH = 55;
-      let imgEl = null;
-
-      if (m.image_path) {
-        imgEl = await loadImg(getPublicImageUrl(m.image_path));
-        if (imgEl) {
-          const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
-          imgDrawH = IMG_COL / ratio;
-          if (imgDrawH > 120) imgDrawH = 120;
-        }
-      }
-
-      const minTextH = 50;
-      const addedPolaroidH = currentStyle.polaroid ? 16 : 0;
-      const rowH = Math.max(imgDrawH + addedPolaroidH, minTextH);
-      ensureSpace(rowH + 10);
-
-      const imgX = rev ? ML + TEXT_COL + GAP : ML;
-      const textX = rev ? ML : ML + IMG_COL + GAP;
-
-      if (imgEl) {
-        const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
-        let drawW = IMG_COL;
-        let drawH = drawW / ratio;
-        if (drawH > 120) { drawH = 120; drawW = drawH * ratio; }
-        const offsetX = imgX + (IMG_COL - drawW) / 2;
-
-        if (currentStyle.polaroid) {
-          // Polaroid Frame: White backing card with fine border
-          pdf.setFillColor(255, 255, 255);
-          pdf.setDrawColor(215, 205, 185);
-          pdf.setLineWidth(0.3);
-          pdf.roundedRect(offsetX - 3, y - 3, drawW + 6, drawH + 16, 2, 2, 'FD');
-          
-          const roundedSrc = getRoundedImgData(imgEl, drawW, drawH, 0, '#ffffff');
-          pdf.addImage(roundedSrc, 'JPEG', offsetX, y, drawW, drawH, '', 'FAST');
-        } else {
-          const bgHex = theme === 'romantic' ? '#fbfaf5' : '#ffffff';
-          const roundedSrc = getRoundedImgData(imgEl, drawW, drawH, currentStyle.cornerRadius, bgHex);
-          pdf.addImage(roundedSrc, 'JPEG', offsetX, y, drawW, drawH, '', 'FAST');
-        }
-      } else {
-        if (currentStyle.polaroid) {
-          pdf.setFillColor(255, 255, 255);
-          pdf.setDrawColor(215, 205, 185);
-          pdf.setLineWidth(0.3);
-          pdf.roundedRect(imgX - 3, y - 3, IMG_COL + 6, imgDrawH + 16, 2, 2, 'FD');
-          pdf.setFont(currentStyle.fontMain, 'normal');
-          pdf.setFontSize(8);
-          pdf.setTextColor(180, 170, 150);
-          pdf.text('KEIN FOTO', imgX + IMG_COL / 2, y + imgDrawH / 2, { align: 'center' });
-        } else {
-          const fillRgb = theme === 'romantic' ? [242, 238, 227] : [242, 242, 240];
-          pdf.setFillColor(...fillRgb);
-          pdf.roundedRect(imgX, y, IMG_COL, imgDrawH, currentStyle.cornerRadius || 2, currentStyle.cornerRadius || 2, 'F');
-          pdf.setFont(currentStyle.fontMain, 'normal');
-          pdf.setFontSize(6.5);
-          pdf.setTextColor(185, 185, 180);
-          pdf.text('KEIN FOTO', imgX + IMG_COL / 2, y + imgDrawH / 2, { align: 'center' });
-        }
-      }
-
-      const textTopOffset = 2;
-
-      pdf.setFont(currentStyle.fontMain, currentStyle.numStyle);
-      pdf.setFontSize(6.5);
+      pdf.setFont(currentStyle.fontMain, 'normal');
+      pdf.setFontSize(9);
       pdf.setTextColor(...currentStyle.textMuted);
-      
-      if (theme === 'romantic') {
-        pdf.text(`Aktivität ${String(i + 1).padStart(2, '0')}`, textX, y + textTopOffset + 5);
-      } else if (theme === 'scrapbook') {
-        pdf.text(`[ AKTIVITÄT ${String(i + 1).padStart(2, '0')} ]`, textX, y + textTopOffset + 5);
-      } else {
-        pdf.setCharSpace(1.8);
-        pdf.text(`AKTIVITÄT ${String(i + 1).padStart(2, '0')}`, textX, y + textTopOffset + 5);
-        pdf.setCharSpace(0);
-      }
+      const tagText = $('#hero-tag-text').innerText || '';
+      pdf.text(tagText.toUpperCase().split('').join('  '), PW / 2, PH / 3, { align: 'center' });
 
       pdf.setFont(currentStyle.fontTitle, currentStyle.titleStyle);
-      pdf.setFontSize(theme === 'romantic' ? 19 : 17);
+      pdf.setFontSize(28);
       pdf.setTextColor(...currentStyle.textColor);
-      const titleLines = pdf.splitTextToSize(m.title, TEXT_COL);
-      pdf.text(titleLines, textX, y + textTopOffset + 13);
-      const titleBlockH = titleLines.length * (theme === 'romantic' ? 7.5 : 6.5);
+      const title = $('#hero-title').innerText || '';
+      const titleLines = pdf.splitTextToSize(title, PW - 40);
+      pdf.text(titleLines, PW / 2, PH / 3 + 15, { align: 'center' });
 
-      pdf.setFont(currentStyle.fontMain, currentStyle.descStyle);
-      pdf.setFontSize(theme === 'romantic' ? 10 : 9);
-      pdf.setTextColor(...(theme === 'scrapbook' ? [68, 68, 68] : [105, 105, 98]));
-      const descLines = pdf.splitTextToSize(m.description || '', TEXT_COL);
-      pdf.text(descLines, textX, y + textTopOffset + 13 + titleBlockH + 3);
+      pdf.setFont(currentStyle.fontTitle, theme === 'romantic' ? 'italic' : 'normal');
+      pdf.setFontSize(13);
+      pdf.setTextColor(...currentStyle.textMuted);
+      const subText = $('#hero-sub-text').innerText || '';
+      pdf.text(subText, PW / 2, PH / 3 + 15 + titleLines.length * 9 + 4, { align: 'center' });
 
-      y += rowH + 6;
+      pdf.addPage();
+      fillPageBackground();
+      y = MT;
+    } else {
+      // No Cover Page
+      if (layout === 'classic' || layout === 'compact') {
+        // Draw standard header on Page 1
+        fillPageBackground();
 
-      if (i < moments.length - 1) {
-        ensureSpace(4);
+        pdf.setFont(currentStyle.fontMain, 'normal');
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(...currentStyle.textMuted);
+        const tagText = $('#hero-tag-text').innerText || '';
+        const spacedTagText = tagText.toUpperCase().split('').join('  ');
+        pdf.text(spacedTagText, headerX, y + 4, headerOpts);
+        y += 9;
+
+        pdf.setFont(currentStyle.fontTitle, currentStyle.titleStyle);
+        pdf.setFontSize(22);
+        pdf.setTextColor(...currentStyle.textColor);
+        const title = $('#hero-title').innerText || '';
+        pdf.text(title, headerX, y + 6, headerOpts);
+        y += 12;
+
+        pdf.setFont(currentStyle.fontTitle, theme === 'romantic' ? 'italic' : 'normal');
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(...currentStyle.textMuted);
+        const subText = $('#hero-sub-text').innerText || '';
+        pdf.text(subText, headerX, y + 3, headerOpts);
+        y += 8;
+
         if (currentStyle.useLine && currentStyle.dividerColor) {
           pdf.setDrawColor(...currentStyle.dividerColor);
-          pdf.setLineWidth(0.2);
+          pdf.setLineWidth(0.25);
           pdf.line(ML, y, PW - MR, y);
-          y += 6;
+          y += 7;
         } else {
           y += 4;
+        }
+      } else {
+        // Spacious layout starts directly with activities on Page 1
+        fillPageBackground();
+      }
+    }
+
+    if (layout === 'spacious') {
+      // Foto-Buch: 1 activity per page
+      for (let i = 0; i < moments.length; i++) {
+        const m = moments[i];
+        y = MT + 10;
+
+        let imgW = 130;
+        let imgDrawH = 90;
+        let imgEl = null;
+
+        if (m.image_path) {
+          imgEl = await loadImg(getPublicImageUrl(m.image_path));
+          if (imgEl) {
+            const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+            const targetRatio = 130 / 110;
+            if (ratio >= targetRatio) {
+              // Image is wider than bounding box -> fit to width
+              imgW = 130;
+              imgDrawH = 130 / ratio;
+            } else {
+              // Image is taller than bounding box -> fit to height
+              imgDrawH = 110;
+              imgW = 110 * ratio;
+            }
+          }
+        }
+
+        const imgX = (PW - imgW) / 2;
+
+        if (imgEl) {
+          if (currentStyle.polaroid) {
+            // Polaroid style single page layout
+            pdf.setFillColor(255, 255, 255);
+            pdf.setDrawColor(215, 205, 185);
+            pdf.setLineWidth(0.3);
+            pdf.roundedRect(imgX - 4, y - 4, imgW + 8, imgDrawH + 20, 3, 3, 'FD');
+
+            const roundedSrc = getRoundedImgData(imgEl, imgW, imgDrawH, 0, '#ffffff');
+            pdf.addImage(roundedSrc, 'JPEG', imgX, y, imgW, imgDrawH, '', 'FAST');
+            y += imgDrawH + 22;
+          } else {
+            const bgHex = theme === 'romantic' ? '#fbfaf5' : '#ffffff';
+            const roundedSrc = getRoundedImgData(imgEl, imgW, imgDrawH, currentStyle.cornerRadius * 1.5, bgHex);
+            pdf.addImage(roundedSrc, 'JPEG', imgX, y, imgW, imgDrawH, '', 'FAST');
+            y += imgDrawH + 12;
+          }
+        } else {
+          pdf.setFillColor(242, 242, 240);
+          pdf.roundedRect(imgX, y, imgW, 70, 4, 4, 'F');
+          y += 82;
+        }
+
+        pdf.setFont(currentStyle.fontMain, currentStyle.numStyle);
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(...currentStyle.textMuted);
+        const labelText = theme === 'romantic' ? `Aktivität ${String(i + 1).padStart(2, '0')}` : `AKTIVITÄT ${String(i + 1).padStart(2, '0')}`;
+        pdf.text(labelText, PW / 2, y, { align: 'center' });
+        y += 6;
+
+        pdf.setFont(currentStyle.fontTitle, currentStyle.titleStyle);
+        pdf.setFontSize(22);
+        pdf.setTextColor(...currentStyle.textColor);
+        const titleLines = pdf.splitTextToSize(m.title, PW - 40);
+        pdf.text(titleLines, PW / 2, y, { align: 'center' });
+        y += titleLines.length * 8.5 + 2;
+
+        pdf.setFont(currentStyle.fontMain, currentStyle.descStyle);
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(...(theme === 'scrapbook' ? [68, 68, 68] : [105, 105, 98]));
+        const descLines = pdf.splitTextToSize(m.description || '', PW - 40);
+        pdf.text(descLines, PW / 2, y, { align: 'center' });
+
+        if (i < moments.length - 1) {
+          pdf.addPage();
+          fillPageBackground();
+        }
+      }
+    } else if (layout === 'compact') {
+      // Kompaktes Poster (2 Column Tiled Grid) - Fits up to 10 activities per page
+      const COLS = 2;
+      const GAP_C = 6;
+      const CARD_W = (CW - GAP_C) / COLS;
+
+      let leftY = y;
+      let rightY = y;
+
+      for (let i = 0; i < moments.length; i++) {
+        const m = moments[i];
+        const col = i % COLS;
+
+        let curY = col === 0 ? leftY : rightY;
+
+        let imgEl = null;
+        if (m.image_path) {
+          imgEl = await loadImg(getPublicImageUrl(m.image_path));
+        }
+
+        const labelH = 3.5;
+        const titleLines = pdf.splitTextToSize(m.title, CARD_W);
+        const titleH = titleLines.length * 4.5;
+        
+        const descLines = pdf.splitTextToSize(m.description || '', CARD_W);
+        const limitedLines = descLines.slice(0, 3);
+        const descH = limitedLines.length * 3.5;
+        
+        const imgH = 30; // Fixed image height
+        const imgSpacing = currentStyle.polaroid ? 8 : 4;
+        const itemH = imgH + imgSpacing + labelH + titleH + descH + 6;
+
+        if (curY + itemH > PH - 12) {
+          pdf.addPage();
+          fillPageBackground();
+          curY = MT + 5;
+          leftY = curY;
+          rightY = curY;
+        }
+
+        const itemX = ML + col * (CARD_W + GAP_C);
+
+        if (imgEl) {
+          if (currentStyle.polaroid) {
+            pdf.setFillColor(255, 255, 255);
+            pdf.setDrawColor(215, 205, 185);
+            pdf.setLineWidth(0.25);
+            pdf.roundedRect(itemX - 1.5, curY - 1.5, CARD_W + 3, imgH + 8, 1, 1, 'FD');
+
+            const roundedSrc = getRoundedImgData(imgEl, CARD_W, imgH, 0, '#ffffff');
+            pdf.addImage(roundedSrc, 'JPEG', itemX, curY, CARD_W, imgH, '', 'FAST');
+            curY += imgH + 8;
+          } else {
+            const bgHex = theme === 'romantic' ? '#fbfaf5' : '#ffffff';
+            const roundedSrc = getRoundedImgData(imgEl, CARD_W, imgH, currentStyle.cornerRadius, bgHex);
+            pdf.addImage(roundedSrc, 'JPEG', itemX, curY, CARD_W, imgH, '', 'FAST');
+            curY += imgH + 4;
+          }
+        } else {
+          pdf.setFillColor(242, 242, 240);
+          pdf.roundedRect(itemX, curY, CARD_W, imgH, currentStyle.cornerRadius || 2, currentStyle.cornerRadius || 2, 'F');
+          pdf.setFont(currentStyle.fontMain, 'normal');
+          pdf.setFontSize(6);
+          pdf.setTextColor(185, 185, 180);
+          pdf.text('KEIN FOTO', itemX + CARD_W / 2, curY + imgH / 2, { align: 'center' });
+          curY += imgH + 4;
+        }
+
+        pdf.setFont(currentStyle.fontMain, currentStyle.numStyle);
+        pdf.setFontSize(5.5);
+        pdf.setTextColor(...currentStyle.textMuted);
+        const labelText = theme === 'romantic' ? `Aktivität ${String(i + 1).padStart(2, '0')}` : `AKTIVITÄT ${String(i + 1).padStart(2, '0')}`;
+        pdf.text(labelText, itemX, curY);
+        curY += 3.5;
+
+        pdf.setFont(currentStyle.fontTitle, currentStyle.titleStyle);
+        pdf.setFontSize(11);
+        pdf.setTextColor(...currentStyle.textColor);
+        pdf.text(titleLines, itemX, curY);
+        curY += titleH;
+
+        pdf.setFont(currentStyle.fontMain, currentStyle.descStyle);
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(...(theme === 'scrapbook' ? [68, 68, 68] : [105, 105, 98]));
+        pdf.text(limitedLines, itemX, curY);
+        curY += descH + 6;
+
+        if (col === 0) {
+          leftY = curY;
+        } else {
+          rightY = curY;
+        }
+      }
+
+      y = Math.max(leftY, rightY);
+    } else {
+      // Classic Magazine Layout (alternating row grid)
+      for (let i = 0; i < moments.length; i++) {
+        const m = moments[i];
+        const rev = i % 2 === 1;
+
+        let imgEl = null;
+        if (m.image_path) {
+          imgEl = await loadImg(getPublicImageUrl(m.image_path));
+        }
+
+        const titleLines = pdf.splitTextToSize(m.title, TEXT_COL);
+        const titleBlockH = titleLines.length * (theme === 'romantic' ? 7.5 : 6.5);
+        
+        const descLines = pdf.splitTextToSize(m.description || '', TEXT_COL);
+        const descBlockH = descLines.length * (theme === 'romantic' ? 4.8 : 4.2);
+        
+        const textBlockH = 2 + 13 + titleBlockH + 3 + descBlockH + 6;
+        
+        const imgDrawH = 55; // Fixed image height
+        const addedPolaroidH = currentStyle.polaroid ? 16 : 0;
+        const rowH = Math.max(imgDrawH + addedPolaroidH, textBlockH);
+        
+        ensureSpace(rowH + 10);
+
+        const imgX = rev ? ML + TEXT_COL + GAP : ML;
+        const textX = rev ? ML : ML + IMG_COL + GAP;
+
+        if (imgEl) {
+          const aspectRatio = imgEl.naturalWidth / imgEl.naturalHeight;
+          const slotRatio = IMG_COL / imgDrawH;
+          let drawW, drawH;
+          if (aspectRatio >= slotRatio) {
+            drawW = IMG_COL;
+            drawH = IMG_COL / aspectRatio;
+          } else {
+            drawH = imgDrawH;
+            drawW = imgDrawH * aspectRatio;
+          }
+          const offsetX = imgX + (IMG_COL - drawW) / 2;
+          const offsetY = y + (imgDrawH - drawH) / 2;
+
+          if (currentStyle.polaroid) {
+            pdf.setFillColor(255, 255, 255);
+            pdf.setDrawColor(215, 205, 185);
+            pdf.setLineWidth(0.3);
+            pdf.roundedRect(imgX - 3, y - 3, IMG_COL + 6, imgDrawH + 16, 2, 2, 'FD');
+
+            const roundedSrc = getRoundedImgData(imgEl, drawW, drawH, 0, '#ffffff');
+            pdf.addImage(roundedSrc, 'JPEG', offsetX, offsetY, drawW, drawH, '', 'FAST');
+          } else {
+            const bgHex = theme === 'romantic' ? '#fbfaf5' : '#ffffff';
+            const roundedSrc = getRoundedImgData(imgEl, drawW, drawH, currentStyle.cornerRadius, bgHex);
+            pdf.addImage(roundedSrc, 'JPEG', offsetX, offsetY, drawW, drawH, '', 'FAST');
+          }
+        } else {
+          if (currentStyle.polaroid) {
+            pdf.setFillColor(255, 255, 255);
+            pdf.setDrawColor(215, 205, 185);
+            pdf.setLineWidth(0.3);
+            pdf.roundedRect(imgX - 3, y - 3, IMG_COL + 6, imgDrawH + 16, 2, 2, 'FD');
+            pdf.setFont(currentStyle.fontMain, 'normal');
+            pdf.setFontSize(8);
+            pdf.setTextColor(180, 170, 150);
+            pdf.text('KEIN FOTO', imgX + IMG_COL / 2, y + imgDrawH / 2, { align: 'center' });
+          } else {
+            const fillRgb = theme === 'romantic' ? [242, 238, 227] : [242, 242, 240];
+            pdf.setFillColor(...fillRgb);
+            pdf.roundedRect(imgX, y, IMG_COL, imgDrawH, currentStyle.cornerRadius || 2, currentStyle.cornerRadius || 2, 'F');
+            pdf.setFont(currentStyle.fontMain, 'normal');
+            pdf.setFontSize(6.5);
+            pdf.setTextColor(185, 185, 180);
+            pdf.text('KEIN FOTO', imgX + IMG_COL / 2, y + imgDrawH / 2, { align: 'center' });
+          }
+        }
+
+        const textTopOffset = 2;
+
+        pdf.setFont(currentStyle.fontMain, currentStyle.numStyle);
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(...currentStyle.textMuted);
+
+        if (theme === 'romantic') {
+          pdf.text(`Aktivität ${String(i + 1).padStart(2, '0')}`, textX, y + textTopOffset + 5);
+        } else if (theme === 'scrapbook') {
+          pdf.text(`[ AKTIVITÄT ${String(i + 1).padStart(2, '0')} ]`, textX, y + textTopOffset + 5);
+        } else {
+          pdf.setCharSpace(1.8);
+          pdf.text(`AKTIVITÄT ${String(i + 1).padStart(2, '0')}`, textX, y + textTopOffset + 5);
+          pdf.setCharSpace(0);
+        }
+
+        pdf.setFont(currentStyle.fontTitle, currentStyle.titleStyle);
+        pdf.setFontSize(theme === 'romantic' ? 19 : 17);
+        pdf.setTextColor(...currentStyle.textColor);
+        pdf.text(titleLines, textX, y + textTopOffset + 13);
+
+        pdf.setFont(currentStyle.fontMain, currentStyle.descStyle);
+        pdf.setFontSize(theme === 'romantic' ? 10 : 9);
+        pdf.setTextColor(...(theme === 'scrapbook' ? [68, 68, 68] : [105, 105, 98]));
+        pdf.text(descLines, textX, y + textTopOffset + 13 + titleBlockH + 3);
+
+        y += rowH + 6;
+
+        if (i < moments.length - 1) {
+          ensureSpace(4);
+          if (currentStyle.useLine && currentStyle.dividerColor) {
+            pdf.setDrawColor(...currentStyle.dividerColor);
+            pdf.setLineWidth(0.2);
+            pdf.line(ML, y, PW - MR, y);
+            y += 6;
+          } else {
+            y += 4;
+          }
         }
       }
     }
@@ -797,9 +1046,70 @@ function openExportModal() {
 function closeExportModal() {
   $('#export-modal').classList.add('hidden');
 }
-$('.export-btn').addEventListener('click', openExportModal);
+$('.export-btn').addEventListener('click', () => {
+  if (!canEdit) return;
+  if (!currentEvent?.is_paid) {
+    openPaywallModal();
+  } else {
+    openExportModal();
+  }
+});
 $('#export-cancel-btn').addEventListener('click', closeExportModal);
 $('#export-modal').addEventListener('click', function (e) { if (e.target === this) closeExportModal(); });
+
+// ─── Paywall ───────────────────────────────────────────────────────
+function openPaywallModal() {
+  $('#paywall-modal').classList.remove('hidden');
+}
+function closePaywallModal() {
+  $('#paywall-modal').classList.add('hidden');
+}
+
+let _pollTimer = null;
+
+function startCheckout() {
+  if (!LS_CHECKOUT_URL) {
+    showToast('Checkout nicht konfiguriert (VITE_LS_CHECKOUT_URL fehlt).');
+    return;
+  }
+  closePaywallModal();
+  const url = `${LS_CHECKOUT_URL}?checkout[custom][event_id]=${currentEvent.id}&embed=1`;
+  window.createLemonSqueezy?.();
+  if (window.LemonSqueezy) {
+    window.LemonSqueezy.Url.Open(url);
+  } else {
+    window.open(url, '_blank');
+  }
+  pollForPayment(currentEvent.id);
+}
+
+function pollForPayment(eventId) {
+  let attempts = 0;
+  clearInterval(_pollTimer);
+  showToast('Warte auf Zahlungsbestätigung…');
+  _pollTimer = setInterval(async () => {
+    attempts++;
+    try {
+      const ev = await getEvent(eventId);
+      if (ev?.is_paid) {
+        clearInterval(_pollTimer);
+        currentEvent = ev;
+        renderEvent();
+        showToast('✓ Freigeschaltet! Buch jetzt exportieren.');
+        openExportModal();
+      } else if (attempts >= 30) {
+        clearInterval(_pollTimer);
+        showToast('Zahlung noch nicht bestätigt — lade die Seite neu.');
+      }
+    } catch {
+      // transient network errors during polling are ignored
+    }
+  }, 2000);
+}
+
+$('#paywall-checkout-btn').addEventListener('click', startCheckout);
+$('#paywall-cancel-btn').addEventListener('click', closePaywallModal);
+$('#paywall-modal').addEventListener('click', function (e) { if (e.target === this) closePaywallModal(); });
 
 // Selection handler for export themes
 document.querySelectorAll('.theme-option').forEach(card => {
@@ -811,10 +1121,40 @@ document.querySelectorAll('.theme-option').forEach(card => {
   });
 });
 
+// Selection handler for export layout density
+document.querySelectorAll('.layout-option').forEach(pill => {
+  pill.addEventListener('click', function() {
+    document.querySelectorAll('.layout-option').forEach(p => p.classList.remove('selected'));
+    this.classList.add('selected');
+    const radio = this.querySelector('input[type="radio"]');
+    if (radio) radio.checked = true;
+
+    // Auto-disable cover toggle for Poster (compact) layout
+    const layout = radio?.value;
+    const coverRow = document.getElementById('cover-setting-row');
+    const coverCheckbox = document.getElementById('export-cover-toggle');
+    if (layout === 'compact') {
+      if (coverRow) {
+        coverRow.style.opacity = '0.4';
+        coverRow.style.pointerEvents = 'none';
+      }
+      if (coverCheckbox) coverCheckbox.checked = false;
+    } else {
+      if (coverRow) {
+        coverRow.style.opacity = '1';
+        coverRow.style.pointerEvents = 'auto';
+      }
+      if (coverCheckbox) coverCheckbox.checked = true;
+    }
+  });
+});
+
 $('#export-confirm-btn').addEventListener('click', () => {
   const selectedTheme = document.querySelector('input[name="export-theme"]:checked')?.value || 'modern';
+  const selectedLayout = document.querySelector('input[name="export-layout"]:checked')?.value || 'classic';
+  const useCover = document.getElementById('export-cover-toggle')?.checked ?? true;
   closeExportModal();
-  exportPDF(selectedTheme);
+  exportPDF(selectedTheme, selectedLayout, useCover);
 });
 
 $('#modal-cancel-btn').addEventListener('click', closeAddModal);
