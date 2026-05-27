@@ -82,13 +82,16 @@ The goal is a real product that can be shared, collaborated on, and monetized.
 **Not yet decided (intentionally deferred):**
 - Whether events are single-author or collaborative
 - Login required or not for v1 (leaning toward no login for simplicity)
-- Exact pricing
+
+**Decided:**
+- Preis: **3,99 € einmalig** pro Event (CTA in Paywall-Modal)
 
 **Status of the migration:**
 - ✅ Supabase backend (DB + Storage) wired into the frontend
 - ✅ Shareable URL via `#/event/<id>` (hash route, not server route)
 - ✅ localforage and URL-hash sharing logic removed
-- ✅ Paywall before PDF export (Lemon Squeezy integration) — **frontend + Edge Function done; needs LS account setup to go live**
+- ✅ Paywall + Lemon Squeezy integration **vollständig live**: LS-Account eingerichtet (`memoly.lemonsqueezy.com`), Edge Function deployed (ACTIVE), Webhook konfiguriert, E2E-Test erfolgreich
+- ⏳ Vercel Deploy — noch ausstehend (erst Design-Polish)
 
 **Why Lemon Squeezy instead of Stripe:**
 Lemon Squeezy is a Merchant of Record — they are legally the seller, the developer is just the supplier. This matters because:
@@ -119,75 +122,44 @@ This is the first project with a real monetization attempt. Previous project was
 - Push back on scope creep. If a feature isn't needed for the first paying customer, say so.
 - The emotional quality of the product matters. Design and UX decisions should reflect that this is a product people use for meaningful moments.
 
-## Last Session (2026-05-25)
+## Last Session (2026-05-26)
 
-### Was gebaut / geändert wurde
+### Was gemacht wurde
 
-Lemon Squeezy Paywall vollständig implementiert (Frontend + Supabase Edge Function). Außerdem PDF-Themes und Titelseite mit Playwright verifiziert.
+Code-Audit + Deployment-Verifikation. Kein Code geändert.
 
-**PDF-Qualitätsprüfung (kein Code geändert):**
-- Alle drei PDF-Themes (Modern, Romantic, Scrapbook) mit Playwright exportiert und visuell verglichen — alle korrekt und deutlich unterschiedlich.
-- Titelseite (Deckblatt) war bereits implementiert und funktioniert korrekt: eigene A4-Seite pro Theme, mit passendem Hintergrund und Typografie.
-- Export-Modal mit Theme-Picker, Layout-Wahl und Deckblatt-Toggle bereits vorhanden.
+**Ergebnis: Die gesamte Zahlungsintegration ist live und getestet.**
 
-**Lemon Squeezy Paywall — neu implementiert:**
+- LS-Account existiert unter `memoly.lemonsqueezy.com`; `VITE_LS_CHECKOUT_URL` in `.env.local` ist befüllt (`memoly.lemonsqueezy.com/checkout/buy/c392bd2e-d934-41df-8239-b567e619fb58`)
+- Edge Function `lemon-webhook` ist deployed und ACTIVE (Version 2, 2026-05-26 18:54 UTC) — verifiziert via `supabase functions list`
+- Webhook in LS-Dashboard konfiguriert (Test-Mode)
+- E2E-Test mit echter Testzahlung erfolgreich: Paywall-Flow → LS Checkout → `is_paid = true` in Supabase → Export freigeschaltet
 
-*Frontend (`index.html`, `src/main.js`):*
-- `renderEvent()` setzt den Export-Button jetzt abhängig von `canEdit` und `is_paid`:
-  - `!canEdit` → Button ausgeblendet (Lesende sehen keinen Export-Button)
-  - `canEdit && !is_paid` → Amber-farbener Button „✦ Buch freischalten & exportieren" (Klasse `export-btn--locked`)
-  - `canEdit && is_paid` → Normaler dunkler Export-Button wie zuvor
-- Paywall-Modal (Bottom Sheet): ✦-Icon, Titel, Beschreibung, 4 Feature-Punkte mit Checkmarks, Amber-CTA „Jetzt freischalten — 3,99 €“, „Sicher & verschlüsselt · Lemon Squeezy“-Footer, „Vielleicht später“-Abbrechen.
-- `startCheckout()`: öffnet Lemon Squeezy Overlay via `window.LemonSqueezy.Url.Open(url)` (Fallback: `window.open`). URL enthält `event_id` als Custom-Data (`?checkout[custom][event_id]=...&embed=1`). Checkout-URL kommt aus `VITE_LS_CHECKOUT_URL`.
-- `pollForPayment()`: polling alle 2 Sekunden für max. 60 Sekunden auf `is_paid = true`. Wenn bestätigt: `renderEvent()` neu aufrufen + Export-Modal automatisch öffnen.
-- Lemon Squeezy JS (`https://app.lemonsqueezy.com/js/lemon.js`) als `defer`-Script eingebunden.
-- `.modal-sheet` bekommt `max-height: 88vh; overflow-y: auto` — verhindert dass tall Modals über die Viewport-Oberkante hinauswachsen.
-
-*Supabase Edge Function (`supabase/functions/lemon-webhook/index.ts`) — neu:*
-- Empfängt Webhook von Lemon Squeezy nach erfolgreicher Zahlung.
-- Verifiziert HMAC-SHA256-Signatur gegen `LEMON_WEBHOOK_SECRET`.
-- Ignoriert alle Events außer `order_created`.
-- Liest `meta.custom_data.event_id` und setzt `is_paid = true` via Service-Role-Key (umgeht RLS).
-- `SUPABASE_URL` und `SUPABASE_SERVICE_ROLE_KEY` werden von Supabase automatisch injiziert.
-
-**Entscheidungen:**
-- **Hard-Gate statt Wasserzeichen**: Nutzer hat 30–60 Minuten investiert → maximale Zahlungsbereitschaft genau vor dem Export. Kein Wasserzeichen nötig.
-- **Polling statt Supabase Realtime**: 5 Zeilen vs. vollständige Subscription-Verwaltung. Zuverlässiger bei Tab-Wechsel nach dem Checkout-Overlay.
-- **Kein Aktivitäten-Limit**: Limit schafft Reibung vor dem emotionalen Investment. Nur der Export wird gegattet.
-- **Export für Lesende ausgeblendet**: Nur der Ersteller (Edit-Token vorhanden) kann exportieren.
-
-**Probleme & Lösungen:**
-- Playwright-Test zeigte Modal bei `top: -372` → kein echter Bug, `scrollIntoView()` im Test hatte das Overlay verschoben. Ohne diesen Call erscheint das Modal korrekt bei `top: 322`.
-
-**Files changed:**
-- `index.html` — Paywall-CSS, Paywall-Modal-HTML, LS-Script-Tag, `max-height` für `.modal-sheet`
-- `src/main.js` — `LS_CHECKOUT_URL` Env-Var, `renderEvent()` Button-State-Logik, `openPaywallModal/closePaywallModal`, `startCheckout`, `pollForPayment`, Event-Listener für Paywall-Buttons
-- `supabase/functions/lemon-webhook/index.ts` — neu
-- `.env.local` — Placeholder `VITE_LS_CHECKOUT_URL=` (muss nach LS-Setup befüllt werden)
+**Gleichzeitig CLAUDE.md aufgeräumt:**
+- Backlog-Item „Skeleton-Cards” entfernt (war veraltet — bereits implementiert)
+- „Exact pricing” aus „Not yet decided” entfernt (Preis ist 3,99 €, steht im Code)
+- Status-Bullets in „Where it's going” aktualisiert
 
 ## Next Steps
 
-1. **Lemon Squeezy Account + Produkt einrichten (Klick-Arbeit):**
-   - Account unter app.lemonsqueezy.com anlegen
-   - Store erstellen, Produkt „memoly Premium Export“ (3,99 €, einmalig) anlegen → Variant-ID notieren
-   - Buy-URL in `.env.local` ein tragen: `VITE_LS_CHECKOUT_URL=https://dein-store.lemonsqueezy.com/buy/VARIANT_ID`
+1. **Design-Polish** (läuft gerade) — Kleinere visuelle Anpassungen vor dem ersten öffentlichen Deploy.
 
-2. **Edge Function deployen + Webhook konfigurieren:**
-   ```
-   supabase functions deploy lemon-webhook
-   supabase secrets set LEMON_WEBHOOK_SECRET=dein-webhook-secret
-   ```
-   Im LS-Dashboard Webhook anlegen: URL `https://vddmjeihfsmibtcwxaaa.supabase.co/functions/v1/lemon-webhook`, Event `order_created`, Secret eintragen.
+2. **Vercel-Deploy:**
+   - Repo bei vercel.com importieren (GitHub-Verbindung)
+   - Env-Vars für Production eintragen: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_LS_CHECKOUT_URL`
+   - Nach Deploy: Webhook-URL in LS-Dashboard auf Production-URL aktualisieren (oder zweiten Webhook für Production anlegen), LS-Test-Mode deaktivieren für echte Zahlungen
 
-3. **End-to-End-Test mit echter Zahlung** (LS hat Test-Mode): Paywall-Flow durchspielen, prüfen dass `is_paid = true` in Supabase gesetzt wird und Export freigeschaltet wird.
-
-4. **Vercel-Deploy:** Repo importieren, Env-Vars `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_LS_CHECKOUT_URL` für Production/Preview/Development eintragen.
+3. **🚨 Marketing-Plan — höchste Priorität:**
+   Das Produkt ist technisch fertig. Ohne Vertrieb keine erste zahlende Person. Konkret zu klären:
+   - Wer sind die ersten 10 Nutzer? (direktes Umfeld, Paare, Reisende)
+   - Welcher Kanal für den ersten Anstoß? (Instagram, TikTok, Reddit, persönliche Empfehlung)
+   - Was ist das Hook-Format? (Demo-Video „So sieht das fertige PDF aus", Vorher/Nachher: Handy-Gallerie vs. memoly-Export)
+   - Ziel vor dem Launch definieren: erste Zahlung innerhalb von X Tagen nach Deploy
 
 ## Backlog (nicht release-blockierend)
 
 - `check.cjs` durch `node --check` oder ESLint ersetzen.
 - Mögliche „Meine Events"-Übersicht (LocalStorage-Token-Map liest schon eine JSON-Map, also einfach umsetzbar wenn gewollt).
-- **Loading-State polishen:** Aktuell simpler Spinner. Soll später durch Skeleton-Cards ersetzt werden (Placeholder-Kacheln in Card-Form, grau animiert — wirkt wie die fertige Seite während sie lädt).
 
 ## Security rules (must always follow)
 
