@@ -10,12 +10,13 @@ function Nav(){
       borderBottom:"1px solid rgba(217,211,199,.5)"
     }}>
       <div className="wrap" style={{display:"flex", alignItems:"center", justifyContent:"space-between", height:64}}>
-        <a href="#" style={{display:"flex", alignItems:"center", gap:8}}>
+        <a href="#" style={{display:"flex", alignItems:"center", gap:10}}>
+          <img src="/logo.png" style={{width:32, height:32, objectFit:"contain"}} alt="memoly Logo" />
           <span style={{
             fontFamily:"var(--serif)", fontSize:26, lineHeight:1, fontStyle:"italic",
-            letterSpacing:"-.02em"
+            letterSpacing:"-.02em", marginTop:2
           }}>memoly</span>
-          <span style={{fontSize:10, color:"var(--mute)", letterSpacing:".14em", marginTop:6}}>BETA</span>
+          <span style={{fontSize:10, color:"var(--mute)", letterSpacing:".14em", marginTop:8}}>BETA</span>
         </a>
         <div style={{display:"flex", gap:32, alignItems:"center", fontSize:14}}>
           <a href="#how" style={{color:"var(--ink-2)"}}>So funktioniert's</a>
@@ -703,7 +704,10 @@ function Footer(){
       <div className="wrap">
         <div style={{display:"grid", gridTemplateColumns:"1.4fr 1fr 1fr 1fr", gap:40, marginBottom:64}}>
           <div>
-            <div style={{fontFamily:"var(--serif)", fontSize:36, fontStyle:"italic", letterSpacing:"-.02em"}}>memoly</div>
+            <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:16}}>
+              <img src="/logo.png" style={{width:40, height:40, objectFit:"contain"}} alt="memoly Logo" />
+              <div style={{fontFamily:"var(--serif)", fontSize:36, fontStyle:"italic", letterSpacing:"-.02em", marginTop:2}}>memoly</div>
+            </div>
             <p className="body-m" style={{marginTop:16, maxWidth:"32ch"}}>
               Eine kleine App für die Momente einer Reise — entwickelt in Berlin, gemacht für jeden, der weniger Apps und mehr Erinnerung möchte.
             </p>
