@@ -122,39 +122,52 @@ This is the first project with a real monetization attempt. Previous project was
 - Push back on scope creep. If a feature isn't needed for the first paying customer, say so.
 - The emotional quality of the product matters. Design and UX decisions should reflect that this is a product people use for meaningful moments.
 
-## Last Session (2026-05-26)
+## Last Session (2026-05-30)
 
 ### Was gemacht wurde
 
-Code-Audit + Deployment-Verifikation. Kein Code geändert.
+**Landingpage ist live auf Vercel — als reine Pre-Launch-Warteliste-Seite, die eigentliche App ist bewusst gesperrt.** Fokus der Session: Deployment-Tauglichkeit prüfen, App-Zugang abriegeln, Landingpage auf Mobile sauber machen.
 
-**Ergebnis: Die gesamte Zahlungsintegration ist live und getestet.**
+- **Deployment-Check:** `npm run build` läuft sauber durch (Multi-Page: `index.html` + früher `app.html`). Supabase-Client wird korrekt ins Bundle gezogen, Anon-Key inlined (by design öffentlich). Warteliste schreibt in Tabelle `waitlist` (Migration `002_waitlist.sql`, RLS korrekt: anon INSERT erlaubt, SELECT gesperrt). Impressum/Datenschutz landen im Build und sind im Footer verlinkt.
+- **App pre-launch abgeriegelt (dreifach):** (1) alle 6 CTA-Buttons von `/app.html` → `#start` (Warteliste) umgeleitet, (2) `app.html` aus dem Vite-Build-Input auskommentiert → die echte App + `src/`-Bundle werden gar nicht erst deployt, (3) `vercel.json` mit Redirect `/app.html` → `/`. Build schrumpfte dadurch von ~623 KB App-Bundle auf ein 1 KB Loader-Script.
+- **Mobile-Overflow gefixt:** Demo-Vorschaukarte hatte fixe `width={400}` → auf allen Mobile-Viewports horizontaler Overflow (Seite ~418 px statt 375). Auf `width="100%"` + `style={{maxWidth:400}}` umgestellt (kein Desktop-Regress). Verifiziert per Playwright: `scrollWidth == innerWidth` auf 360/375/390/414.
+- **Tap-Targets ≥44 px:** Nav-CTA, Demo-Export-Button und Demo-Preset-Pills von ~35–40 px auf 44 px angehoben.
+- **LiveDemo-Funktion auf Mobile (Touch) verifiziert:** Aktivität eintippen → hinzufügen → erscheint in TripCard → „Als Erinnerung exportieren" zeigt Teaser-Overlay. Alles grün, keine Bugs. (Hinweis: Der Demo-„Export" ist ein bewusster Teaser ohne echtes PDF — der echte Export sitzt in der gesperrten App.)
+- **Alle Sections auf Mobile durchgesehen** (Hero, How, Gallery, Pricing, FAQ, Newsletter, Footer). Ein echter Bug gefunden & gefixt: **FAQ-Überschriftsspalte war `position:sticky` (gewollt auf Desktop), blieb auf Mobile im Single-Column-Layout oben kleben → Hinweistext überlappte mit erster Frage.** Fix: im Mobile-Breakpoint `.lp-grid-faq > div:first-child{position:static !important}`.
 
-- LS-Account existiert unter `memoly.lemonsqueezy.com`; `VITE_LS_CHECKOUT_URL` in `.env.local` ist befüllt (`memoly.lemonsqueezy.com/checkout/buy/c392bd2e-d934-41df-8239-b567e619fb58`)
-- Edge Function `lemon-webhook` ist deployed und ACTIVE (Version 2, 2026-05-26 18:54 UTC) — verifiziert via `supabase functions list`
-- Webhook in LS-Dashboard konfiguriert (Test-Mode)
-- E2E-Test mit echter Testzahlung erfolgreich: Paywall-Flow → LS Checkout → `is_paid = true` in Supabase → Export freigeschaltet
+### Key decisions & why
 
-**Gleichzeitig CLAUDE.md aufgeräumt:**
-- Backlog-Item „Skeleton-Cards” entfernt (war veraltet — bereits implementiert)
-- „Exact pricing” aus „Not yet decided” entfernt (Preis ist 3,99 €, steht im Code)
-- Status-Bullets in „Where it's going” aktualisiert
+- **App nicht nur per Links verstecken, sondern komplett aus dem Build nehmen.** Stärkste „kein Zugriff"-Garantie: der Produktcode liegt gar nicht erst auf dem Server. Voll reversibel (eine Zeile in `vite.config.js` wieder einkommentieren). Begründung steht als Kommentar direkt im File.
+- **CTAs auf Warteliste statt entfernen.** Funnelt jeden „Start"-Klick zur E-Mail-Erfassung — sammelt Interessenten während der Pre-Launch-Phase.
+- **Responsive-Fixes über `!important`-Regeln im Mobile-Media-Block in `index.html`**, weil die Komponenten Inline-Styles nutzen (React-Inline-`style`-Props lassen sich sonst nicht überschreiben). Etabliertes Muster im File (`.lp-grid-*`).
+
+### Problems & solutions
+
+- **Element-Screenshots zeigten die sticky Nav über Section-Headlines** → zunächst als Bug vermutet. War aber ein Screenshot-Artefakt (Sektionen haben 140 px Top-Padding, Anker-Sprung landet sauber). Per Bounding-Box-Messung vom echten FAQ-Sticky-Bug unterschieden.
+- **Verifikation ohne Rebuild:** Vite-Dev-Server (`localhost:3001`, strictPort) liefert `public/`-Dateien direkt aus; Änderungen an `sections.jsx`/`index.html` per Reload sofort prüfbar — kein `npm run build` für Mobile-Checks nötig.
+
+### Files changed
+
+- `public/sections.jsx` — 6× CTA `/app.html` → `#start`; Demo-Karte `width="100%"`/`maxWidth:400`; Tap-Targets auf 44 px. (CTA/Overflow/Tap-Commits: `b4e8be4`)
+- `index.html` — FAQ-Sticky im Mobile-Breakpoint deaktiviert (`2162a44`).
+- `vite.config.js` — `app.html` aus Build-Input auskommentiert (Pre-Launch-Gating).
+- `vercel.json` — **neu**, Redirect `/app.html` → `/`.
 
 ## Next Steps
 
-1. **Design-Polish** (läuft gerade) — Kleinere visuelle Anpassungen vor dem ersten öffentlichen Deploy.
-
-2. **Vercel-Deploy:**
-   - Repo bei vercel.com importieren (GitHub-Verbindung)
-   - Env-Vars für Production eintragen: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_LS_CHECKOUT_URL`
-   - Nach Deploy: Webhook-URL in LS-Dashboard auf Production-URL aktualisieren (oder zweiten Webhook für Production anlegen), LS-Test-Mode deaktivieren für echte Zahlungen
-
-3. **🚨 Marketing-Plan — höchste Priorität:**
-   Das Produkt ist technisch fertig. Ohne Vertrieb keine erste zahlende Person. Konkret zu klären:
+1. **🚨 Marketing-Plan — höchste Priorität.** Die Landingpage ist live, technisch fertig, sammelt Warteliste-E-Mails. Jetzt zählt nur noch Vertrieb:
    - Wer sind die ersten 10 Nutzer? (direktes Umfeld, Paare, Reisende)
    - Welcher Kanal für den ersten Anstoß? (Instagram, TikTok, Reddit, persönliche Empfehlung)
-   - Was ist das Hook-Format? (Demo-Video „So sieht das fertige PDF aus", Vorher/Nachher: Handy-Gallerie vs. memoly-Export)
-   - Ziel vor dem Launch definieren: erste Zahlung innerhalb von X Tagen nach Deploy
+   - Hook-Format? (Demo-Video „So sieht das fertige PDF aus", Vorher/Nachher: Handy-Galerie vs. memoly-Export)
+   - Ziel definieren: X Warteliste-Anmeldungen bzw. erste Zahlung innerhalb Y Tagen.
+
+2. **App-Launch vorbereiten (wenn Warteliste warm ist).** Drei Handgriffe zum Freischalten: (a) `app:`-Zeile in `vite.config.js` wieder einkommentieren, (b) `vercel.json`-Redirect entfernen, (c) CTAs zurück auf `/app.html` (oder Warteliste-Logik behalten, nur Pricing-Buttons umstellen). Davor: LS-Test-Mode deaktivieren, Webhook-URL auf Production zeigen lassen.
+
+### Open questions / blockers
+
+- **Production-Env-Vars in Vercel gesetzt?** Verifizieren, dass `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_LS_CHECKOUT_URL` im Vercel-Projekt hinterlegt sind (sonst sind Warteliste/Checkout im Prod tot).
+- **`002_waitlist.sql` auf der Live-DB angewendet?** Migrationsdatei existiert; ob im verbundenen Supabase-Projekt ausgeführt, ist nicht aus dem Repo ersichtlich — bei fehlenden Warteliste-Einträgen zuerst hier prüfen.
+- Kosmetik (kein Blocker): In-Browser-Babel + CDN-React auf der Landingpage → langsamerer First Paint, Abhängigkeit von unpkg/esm.sh. Bei Traffic auf echtes Vite-JSX-Bundling umstellen.
 
 ## Backlog (nicht release-blockierend)
 
