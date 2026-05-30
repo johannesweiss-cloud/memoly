@@ -25,7 +25,7 @@ function Nav(){
           <a href="#preise" style={{color:"var(--ink-2)"}}>Preise</a>
         </div>
         <div style={{display:"flex", gap:10, alignItems:"center"}}>
-          <a href="#start" className="btn btn-primary" style={{height:40, padding:"0 18px", fontSize:13}}>
+          <a href="#start" className="btn btn-primary" style={{height:44, padding:"0 18px", fontSize:13}}>
             Kostenlos starten
           </a>
         </div>
@@ -391,7 +391,7 @@ function LiveDemo(){
               <div style={{display:"flex", flexWrap:"wrap", gap:8}}>
                 {presets.map(p => (
                   <button key={p.title} onClick={() => add(p)}
-                    style={{padding:"8px 14px", borderRadius:999, border:"1px solid var(--line)",
+                    style={{height:44, padding:"0 16px", borderRadius:999, border:"1px solid var(--line)",
                       fontSize:13, color:"var(--ink-2)", background:"transparent", transition:"all .2s"}}
                     onMouseEnter={e => {e.currentTarget.style.background="var(--ink)"; e.currentTarget.style.color="var(--bg)"; e.currentTarget.style.borderColor="var(--ink)"}}
                     onMouseLeave={e => {e.currentTarget.style.background="transparent"; e.currentTarget.style.color="var(--ink-2)"; e.currentTarget.style.borderColor="var(--line)"}}
@@ -404,7 +404,7 @@ function LiveDemo(){
               display:"flex", justifyContent:"space-between", alignItems:"center"}}>
               <div className="small">{activities.length} {activities.length===1?"Aktivität":"Aktivitäten"}</div>
               <button onClick={() => {setExported(true); setTimeout(()=>setExported(false), 2400)}}
-                className="btn btn-ghost" style={{height:40, padding:"0 16px", fontSize:13}}>
+                className="btn btn-ghost" style={{height:44, padding:"0 16px", fontSize:13}}>
                 <IconDownload /> {exported ? "Exportiert ✓" : "Als Erinnerung exportieren"}
               </button>
             </div>
@@ -417,7 +417,8 @@ function LiveDemo(){
               title="Wochenende"
               place="Berlin"
               activities={activities}
-              width={400}
+              width="100%"
+              style={{maxWidth:400}}
               showFooter={true}
             />
             {exported && (
