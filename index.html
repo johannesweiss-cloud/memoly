@@ -99,6 +99,9 @@
     .lp-login-link{display:none !important}
     .lp-grid-2,.lp-grid-3,.lp-grid-4{grid-template-columns:1fr !important}
     .lp-grid-faq{grid-template-columns:1fr !important;gap:40px !important}
+    /* Sticky FAQ-Überschrift auf Mobile abschalten — sonst klebt sie oben und
+       die FAQ-Liste scrollt darüber (Überlappung) */
+    .lp-grid-faq > div:first-child{position:static !important}
     .lp-grid-split{grid-template-columns:1fr !important}
     .lp-grid-footer{grid-template-columns:1fr 1fr !important;gap:24px !important}
     .lp-hero-comp{display:none !important}
