@@ -83,7 +83,6 @@ function App(){
     <>
       <Nav />
       <Hero variant={t.heroVariant} />
-      <Quote />
       <HowItWorks />
       <LiveDemo />
       <Gallery />

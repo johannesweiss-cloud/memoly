@@ -9,8 +9,11 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        app: resolve(__dirname, 'app.html')
+        main: resolve(__dirname, 'index.html')
+        // app: resolve(__dirname, 'app.html')
+        // ↑ Pre-Launch: Die echte App wird bewusst NICHT deployt.
+        //   Besucher sollen nur die Landingpage + Warteliste sehen.
+        //   Zum Freischalten diese Zeile wieder einkommentieren.
       }
     }
   }

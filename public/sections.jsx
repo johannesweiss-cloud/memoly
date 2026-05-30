@@ -18,14 +18,13 @@ function Nav(){
           }}>memoly</span>
           <span style={{fontSize:10, color:"var(--mute)", letterSpacing:".14em", marginTop:8}}>BETA</span>
         </a>
-        <div style={{display:"flex", gap:32, alignItems:"center", fontSize:14}}>
+        <div className="lp-nav-links" style={{display:"flex", gap:32, alignItems:"center", fontSize:14}}>
           <a href="#how" style={{color:"var(--ink-2)"}}>So funktioniert's</a>
           <a href="#demo" style={{color:"var(--ink-2)"}}>Probieren</a>
           <a href="#gallery" style={{color:"var(--ink-2)"}}>Beispiele</a>
           <a href="#preise" style={{color:"var(--ink-2)"}}>Preise</a>
         </div>
         <div style={{display:"flex", gap:10, alignItems:"center"}}>
-          <a href="#login" className="small" style={{color:"var(--ink-2)"}}>Anmelden</a>
           <a href="#start" className="btn btn-primary" style={{height:40, padding:"0 18px", fontSize:13}}>
             Kostenlos starten
           </a>
@@ -67,7 +66,7 @@ function HeroEditorial(){
         </h1>
 
         {/* Subtext + CTAs row */}
-        <div className="row reveal d2 in" style={{justifyContent:"space-between", alignItems:"flex-end", gap:40, flexWrap:"wrap"}}>
+        <div className="row reveal d2 in lp-hero-sub" style={{justifyContent:"space-between", alignItems:"flex-end", gap:40, flexWrap:"wrap"}}>
           <p className="body-l" style={{maxWidth:"42ch", margin:0}}>
             Sammle die kleinen Momente deines Urlaubs an einem Ort — und exportiere sie als
             Erinnerung, die du wirklich behältst.
@@ -79,7 +78,7 @@ function HeroEditorial(){
         </div>
 
         {/* The big editorial composition */}
-        <div className="reveal d3 in" style={{position:"relative", marginTop:24, height:620}}>
+        <div className="reveal d3 in lp-hero-comp" style={{position:"relative", marginTop:24, height:620}}>
           {/* Background photo */}
           <PhotoSlot
             label="EDITORIAL HERO — DEIN URLAUBSFOTO"
@@ -151,7 +150,7 @@ function HeroEditorial(){
 // Variant B — Side-by-side editorial
 function HeroSplit(){
   return (
-    <div style={{display:"grid", gridTemplateColumns:"1.05fr .95fr", gap:60, alignItems:"center", minHeight:620}}>
+    <div className="lp-grid-split" style={{display:"grid", gridTemplateColumns:"1.05fr .95fr", gap:60, alignItems:"center", minHeight:620}}>
       <div className="col reveal in" style={{gap:32}}>
         <div className="eyebrow">Ausgabe N°01 · Frühling 2026</div>
         <h1 className="display" style={{fontSize:"clamp(48px, 6.4vw, 96px)", margin:0}}>
@@ -167,8 +166,6 @@ function HeroSplit(){
         </div>
         <div style={{display:"flex", gap:20, alignItems:"center", marginTop:8, color:"var(--mute)", fontSize:12}}>
           <span>Keine Kreditkarte nötig</span>
-          <span style={{width:4, height:4, borderRadius:999, background:"var(--mute)"}}/>
-          <span>Funktioniert offline</span>
           <span style={{width:4, height:4, borderRadius:999, background:"var(--mute)"}}/>
           <span>Privat per Default</span>
         </div>
@@ -246,33 +243,13 @@ function HeroCentered(){
   );
 }
 
-// ─── Trusted by / quote bar ──────────────────────────────────────────────
-function Quote(){
-  return (
-    <section style={{padding:"80px 0", borderTop:"1px solid var(--line-soft)", borderBottom:"1px solid var(--line-soft)"}}>
-      <div className="wrap reveal" style={{display:"grid", gridTemplateColumns:"auto 1fr", gap:60, alignItems:"center"}}>
-        <div style={{fontFamily:"var(--serif)", fontSize:64, lineHeight:1, color:"var(--ink)"}}>“</div>
-        <div>
-          <p style={{fontFamily:"var(--serif)", fontStyle:"italic", fontSize:"clamp(22px, 2.4vw, 30px)", lineHeight:1.25, margin:0, color:"var(--ink-2)"}}>
-            Endlich verschwindet mein Urlaub nicht mehr in 400 unsortierten Fotos.
-            Ich öffne meine memoly und bin sofort wieder dort.
-          </p>
-          <div style={{marginTop:20, display:"flex", gap:12, alignItems:"center", color:"var(--mute)", fontSize:13, letterSpacing:".06em"}}>
-            <span style={{width:32, height:32, borderRadius:999, background:"repeating-linear-gradient(135deg, #d8cfba 0 6px, #c7bda4 6px 12px)"}}/>
-            JOSEFINE K. · BERLIN · BETA-NUTZERIN
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 // ─── How it works ─────────────────────────────────────────────────────────
 function HowItWorks(){
   const steps = [
     { n:"01", title:"Trip anlegen", body:"Gib deiner Reise einen Namen, ein Ziel und einen Monat. Mehr braucht es zum Start nicht.", note:"~ 20 Sekunden" },
     { n:"02", title:"Aktivitäten sammeln", body:"Unterwegs notierst du, was ihr macht — kurze Titel, Zeit, ein Foto. Ohne Hashtags, ohne Stress.", note:"So oft du willst" },
-    { n:"03", title:"Als Erinnerung exportieren", body:"Am Ende der Reise wird daraus ein gedruckter Mini-Magazin-Stil als PDF, Postkarte oder Webseite.", note:"Ein Tap" },
+    { n:"03", title:"Als Erinnerung exportieren", body:"Am Ende der Reise exportierst du alles als PDF — ein echtes Dokument, das du öffnest, druckst oder verschickst.", note:"Ein Tap" },
   ];
   return (
     <section id="how" style={{padding:"140px 0"}}>
@@ -290,7 +267,7 @@ function HowItWorks(){
           </p>
         </div>
 
-        <div style={{display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:0, borderTop:"1px solid var(--line)"}}>
+        <div className="lp-grid-3" style={{display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:0, borderTop:"1px solid var(--line)"}}>
           {steps.map((s, i) => (
             <div key={s.n} className={`reveal d${i+1}`} style={{
               padding:"36px 28px 80px",
@@ -390,7 +367,7 @@ function LiveDemo(){
           </p>
         </div>
 
-        <div style={{display:"grid", gridTemplateColumns:"1.05fr .95fr", gap:48, alignItems:"flex-start"}}>
+        <div className="lp-grid-2" style={{display:"grid", gridTemplateColumns:"1.05fr .95fr", gap:48, alignItems:"flex-start"}}>
           {/* Editor */}
           <div className="reveal d1" style={{background:"var(--card)", border:"1px solid var(--line-soft)", borderRadius:24, padding:28}}>
             <div className="mock-eyebrow" style={{textAlign:"left", marginBottom:18}}>Aktivität hinzufügen</div>
@@ -497,7 +474,7 @@ function Gallery(){
           </h2>
         </div>
 
-        <div style={{
+        <div className="lp-grid-4" style={{
           display:"grid",
           gridTemplateColumns:"repeat(4, 1fr)",
           gap:24,
@@ -511,10 +488,6 @@ function Gallery(){
             </div>
           ))}
         </div>
-
-        <div className="reveal" style={{display:"flex", justifyContent:"center", marginTop:80}}>
-          <a href="#gallery-all" className="btn btn-ghost">Alle Beispiele ansehen <IconArrow /></a>
-        </div>
       </div>
     </section>
   );
@@ -522,67 +495,76 @@ function Gallery(){
 
 // ─── Pricing ──────────────────────────────────────────────────────────────
 function Pricing(){
-  const tiers = [
-    {
-      name:"Reisende:r", price:"0", per:"für immer",
-      tagline:"Für die nächste Reise — ohne Verpflichtung.",
-      features:["1 aktiver Trip", "Bis zu 30 Aktivitäten", "Export als PDF", "Bis 5 Fotos pro Trip", "Privater Link zum Teilen"],
-      cta:"Kostenlos starten", primary:false,
-    },
-    {
-      name:"Vielreisende:r", price:"4", per:"pro Monat",
-      tagline:"Alles, was du brauchst — ohne Limit.",
-      features:["Unbegrenzte Trips", "Unbegrenzte Aktivitäten & Fotos", "Export als PDF, Postkarte oder Mini-Magazin", "Mitreisende einladen (bis 4)", "Eigene Domain für geteilte Erinnerungen", "Offline-Modus"],
-      cta:"Jetzt starten · 14 Tage gratis", primary:true,
-    },
-  ];
   return (
     <section id="preise" style={{padding:"140px 0", borderTop:"1px solid var(--line-soft)"}}>
       <div className="wrap">
         <div className="reveal" style={{textAlign:"center", marginBottom:64}}>
           <div className="eyebrow" style={{marginBottom:18}}>Preise</div>
           <h2 className="display" style={{fontSize:"clamp(40px, 5.4vw, 80px)", margin:0, maxWidth:"16ch", marginInline:"auto"}}>
-            Ehrlich. Klein. <em>Ohne Werbung.</em>
+            Kostenlos. Einmalig <em>wenn's zählt.</em>
           </h2>
           <p className="body-l reveal d1" style={{maxWidth:"48ch", marginInline:"auto", marginTop:24}}>
-            Wir verkaufen keine Daten und blenden keine „Tipps für deine Reise" ein. Du zahlst nichts oder einen kleinen Beitrag — das war's.
+            memoly ist kostenlos zum Ausprobieren. Du zahlst einmalig 3,99 € — nur dann, wenn du eine Erinnerung exportieren möchtest.
           </p>
         </div>
 
-        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, maxWidth:920, margin:"0 auto"}}>
-          {tiers.map((t, i) => (
-            <div key={t.name} className={`reveal d${i+1}`} style={{
-              background: t.primary ? "var(--ink)" : "var(--card)",
-              color: t.primary ? "var(--bg)" : "var(--ink)",
-              borderRadius:24, padding:"36px 32px 32px",
-              border: t.primary ? "1px solid var(--ink)" : "1px solid var(--line-soft)",
-              display:"flex", flexDirection:"column", gap:22
-            }}>
-              <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
-                <div style={{fontFamily:"var(--serif)", fontSize:28}}>{t.name}</div>
-                {t.primary && <span style={{fontSize:10, letterSpacing:".14em", textTransform:"uppercase", padding:"4px 10px", border:"1px solid rgba(239,234,224,.3)", borderRadius:999}}>empfohlen</span>}
-              </div>
-              <div style={{display:"flex", alignItems:"baseline", gap:10}}>
-                <div style={{fontFamily:"var(--serif)", fontSize:72, lineHeight:1}}>€{t.price}</div>
-                <div style={{fontSize:13, opacity:.6}}>{t.per}</div>
-              </div>
-              <div style={{fontSize:14, opacity:.75, lineHeight:1.5}}>{t.tagline}</div>
-              <div style={{height:1, background: t.primary ? "rgba(239,234,224,.15)" : "var(--line-soft)"}}/>
-              <ul style={{listStyle:"none", padding:0, margin:0, display:"flex", flexDirection:"column", gap:12, fontSize:14}}>
-                {t.features.map(f => (
-                  <li key={f} style={{display:"flex", gap:10, alignItems:"flex-start", opacity:.92}}>
-                    <span style={{marginTop:7, width:5, height:5, borderRadius:999, background: t.primary ? "var(--bg)" : "var(--ink)", flexShrink:0}}/>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <button className="btn" style={{
-                marginTop:8, height:48, width:"100%",
-                background: t.primary ? "var(--bg)" : "var(--ink)",
-                color: t.primary ? "var(--ink)" : "var(--bg)"
-              }}>{t.cta}</button>
+        <div className="lp-grid-2" style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, maxWidth:920, margin:"0 auto"}}>
+          {/* Kostenlos */}
+          <div className="reveal d1" style={{
+            background:"var(--card)", borderRadius:24, padding:"36px 32px 32px",
+            border:"1px solid var(--line-soft)", display:"flex", flexDirection:"column", gap:22
+          }}>
+            <div style={{fontFamily:"var(--serif)", fontSize:28}}>Ausprobieren</div>
+            <div style={{display:"flex", alignItems:"baseline", gap:10}}>
+              <div style={{fontFamily:"var(--serif)", fontSize:72, lineHeight:1}}>€0</div>
+              <div style={{fontSize:13, opacity:.6}}>für immer</div>
             </div>
-          ))}
+            <div style={{fontSize:14, opacity:.75, lineHeight:1.5}}>Leg los, ohne nachzudenken — sammle alles, ohne etwas zu zahlen.</div>
+            <div style={{height:1, background:"var(--line-soft)"}}/>
+            <ul style={{listStyle:"none", padding:0, margin:0, display:"flex", flexDirection:"column", gap:12, fontSize:14}}>
+              {["Trips anlegen", "Momente & Fotos sammeln", "Link zum Teilen"].map(f => (
+                <li key={f} style={{display:"flex", gap:10, alignItems:"flex-start", opacity:.92}}>
+                  <span style={{marginTop:7, width:5, height:5, borderRadius:999, background:"var(--ink)", flexShrink:0}}/>
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <a href="#start" className="btn" style={{marginTop:8, height:48, width:"100%", background:"var(--ink)", color:"var(--bg)", textAlign:"center"}}>
+              Jetzt kostenlos starten
+            </a>
+          </div>
+
+          {/* Export */}
+          <div className="reveal d2" style={{
+            background:"var(--ink)", color:"var(--bg)", borderRadius:24, padding:"36px 32px 32px",
+            border:"1px solid var(--ink)", display:"flex", flexDirection:"column", gap:22
+          }}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
+              <div style={{fontFamily:"var(--serif)", fontSize:28}}>Exportieren</div>
+              <span style={{fontSize:10, letterSpacing:".14em", textTransform:"uppercase", padding:"4px 10px", border:"1px solid rgba(239,234,224,.3)", borderRadius:999}}>einmalig</span>
+            </div>
+            <div style={{display:"flex", alignItems:"baseline", gap:10}}>
+              <div style={{fontFamily:"var(--serif)", fontSize:72, lineHeight:1}}>€3,99</div>
+              <div style={{fontSize:13, opacity:.6}}>pro Erinnerung</div>
+            </div>
+            <div style={{fontSize:14, opacity:.75, lineHeight:1.5}}>Bezahle einmalig, wenn du deine Reise für immer festhalten willst.</div>
+            <div style={{height:1, background:"rgba(239,234,224,.15)"}}/>
+            <ul style={{listStyle:"none", padding:0, margin:0, display:"flex", flexDirection:"column", gap:12, fontSize:14}}>
+              {["Alles aus Kostenlos", "PDF-Export in Druckqualität", "Für immer gespeichert", "Kein Abo, keine Karte hinterlegen"].map(f => (
+                <li key={f} style={{display:"flex", gap:10, alignItems:"flex-start", opacity:.92}}>
+                  <span style={{marginTop:7, width:5, height:5, borderRadius:999, background:"var(--bg)", flexShrink:0}}/>
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <a href="#start" className="btn" style={{marginTop:8, height:48, width:"100%", background:"var(--bg)", color:"var(--ink)", textAlign:"center"}}>
+              Erinnerung starten
+            </a>
+          </div>
+        </div>
+
+        <div className="reveal" style={{textAlign:"center", marginTop:40}}>
+          <div className="small">Kein Abo. Keine gespeicherte Karte. Nur einmal zahlen, wenn es dir wichtig ist.</div>
         </div>
       </div>
     </section>
@@ -592,17 +574,17 @@ function Pricing(){
 // ─── FAQ ──────────────────────────────────────────────────────────────────
 function FAQ(){
   const items = [
-    {q:"Brauche ich ein Konto, um zu starten?", a:"Nein. Du kannst sofort einen Trip anlegen und erst beim Exportieren oder Teilen ein Konto erstellen. Alles, was du vorher hinzufügst, wird übernommen."},
-    {q:"Funktioniert memoly offline?", a:"Ja. Aktivitäten, Fotos und Notizen kannst du komplett offline hinzufügen — sie synchronisieren sich, sobald du wieder online bist."},
-    {q:"In welche Formate kann ich exportieren?", a:"PDF (Druckqualität), digitale Postkarte, kleine Webseite mit eigenem Link, oder als Mini-Magazin im A5-Format zum Bestellen."},
-    {q:"Kann ich mit anderen zusammen sammeln?", a:"Ja, mit dem Vielreisende-Plan kannst du bis zu 4 Mitreisende einladen. Alle sehen denselben Trip und können hinzufügen."},
-    {q:"Was passiert mit meinen Fotos?", a:"Sie liegen verschlüsselt auf Servern in Frankfurt. Wir verwenden sie nicht für KI-Training, Werbung oder Empfehlungen. Du kannst alles jederzeit löschen."},
-    {q:"Kann ich kündigen?", a:"Jederzeit, in einem Klick. Deine bestehenden Erinnerungen bleiben für immer abrufbar — nur das Hinzufügen neuer Trips wird wieder limitiert."},
+    {q:"Brauche ich ein Konto, um zu starten?", a:"Nein. Du kannst sofort einen Trip anlegen — kein Konto, keine E-Mail. Nur wenn du exportieren willst, geht es weiter zur Zahlung."},
+    {q:"Funktioniert memoly offline?", a:"Noch nicht. Du brauchst eine Internetverbindung. Offline-Unterstützung ist geplant, aber noch nicht verfügbar."},
+    {q:"In welche Formate kann ich exportieren?", a:"Aktuell als PDF in Druckqualität. Weitere Formate sind in Planung."},
+    {q:"Kann ich mit anderen zusammen sammeln?", a:"Noch nicht. In der aktuellen Version erstellt jede Person ihren eigenen Trip. Gemeinsames Sammeln kommt in einer späteren Version."},
+    {q:"Was passiert mit meinen Fotos?", a:"Sie liegen auf Servern innerhalb der EU. Wir verwenden sie nicht für KI-Training, Werbung oder Empfehlungen. Du kannst alles jederzeit löschen."},
+    {q:"Wie funktioniert die Zahlung?", a:"Du zahlst einmalig 3,99 € pro Erinnerung, genau dann wenn du exportieren möchtest. Kein Abo, keine gespeicherte Karte, keine monatliche Abbuchung."},
   ];
   const [open, setOpen] = React.useState(0);
   return (
     <section id="faq" style={{padding:"140px 0", background:"var(--bg-soft)"}}>
-      <div className="wrap" style={{display:"grid", gridTemplateColumns:"1fr 1.4fr", gap:80, alignItems:"flex-start"}}>
+      <div className="wrap lp-grid-faq" style={{display:"grid", gridTemplateColumns:"1fr 1.4fr", gap:80, alignItems:"flex-start"}}>
         <div className="reveal" style={{position:"sticky", top:96}}>
           <div className="eyebrow" style={{marginBottom:18}}>Häufige Fragen</div>
           <h2 className="display" style={{fontSize:"clamp(40px, 4.8vw, 72px)", margin:0}}>
@@ -702,7 +684,7 @@ function Footer(){
   return (
     <footer style={{padding:"80px 0 60px", borderTop:"1px solid var(--line)"}}>
       <div className="wrap">
-        <div style={{display:"grid", gridTemplateColumns:"1.4fr 1fr 1fr 1fr", gap:40, marginBottom:64}}>
+        <div className="lp-grid-footer" style={{display:"grid", gridTemplateColumns:"1.4fr 1fr 1fr 1fr", gap:40, marginBottom:64}}>
           <div>
             <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:16}}>
               <img src="/logo.png" style={{width:40, height:40, objectFit:"contain"}} alt="memoly Logo" />
@@ -712,37 +694,42 @@ function Footer(){
               Eine kleine App für die Momente einer Reise — entwickelt in Berlin, gemacht für jeden, der weniger Apps und mehr Erinnerung möchte.
             </p>
           </div>
-          <FooterCol title="Produkt" links={["So funktioniert's", "Live-Demo", "Preise", "Beispiele", "Was ist neu"]} />
-          <FooterCol title="Unternehmen" links={["Über uns", "Manifest", "Presse", "Kontakt", "Karriere"]} />
-          <FooterCol title="Rechtliches" links={["Impressum", "Datenschutz", "AGB", "Cookies", "DSGVO"]} />
+          <FooterCol title="Produkt" items={[
+            {label:"So funktioniert's", href:"#how"},
+            {label:"Live-Demo", href:"#demo"},
+            {label:"Preise", href:"#preise"},
+            {label:"Beispiele", href:"#gallery"},
+          ]} />
+          <FooterCol title="Kontakt" items={[
+            {label:"hi@memoly.app", href:"mailto:hi@memoly.app"},
+          ]} />
+          <FooterCol title="Rechtliches" items={[
+            {label:"Impressum", href:"/impressum.html"},
+            {label:"Datenschutz", href:"/datenschutz.html"},
+          ]} />
         </div>
 
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"center",
           borderTop:"1px solid var(--line)", paddingTop:32, color:"var(--mute)", fontSize:12,
           flexWrap:"wrap", gap:16}}>
-          <div>© 2026 memoly GmbH · Made in Berlin · Hosted in Frankfurt</div>
-          <div style={{display:"flex", gap:24}}>
-            <span>DE</span>
-            <span style={{opacity:.5}}>EN</span>
-            <span style={{opacity:.5}}>FR</span>
-          </div>
+          <div>© 2026 memoly · Made in Berlin</div>
         </div>
       </div>
     </footer>
   );
 }
 
-function FooterCol({title, links}){
+function FooterCol({title, items}){
   return (
     <div>
       <div className="eyebrow" style={{marginBottom:18}}>{title}</div>
       <ul style={{listStyle:"none", padding:0, margin:0, display:"flex", flexDirection:"column", gap:10}}>
-        {links.map(l => (
-          <li key={l}><a href="#" style={{fontSize:14, color:"var(--ink-2)"}}>{l}</a></li>
+        {items.map(({label, href}) => (
+          <li key={label}><a href={href} style={{fontSize:14, color:"var(--ink-2)"}}>{label}</a></li>
         ))}
       </ul>
     </div>
   );
 }
 
-Object.assign(window, { Nav, Hero, Quote, HowItWorks, LiveDemo, Gallery, Pricing, FAQ, Newsletter, Footer });
+Object.assign(window, { Nav, Hero, HowItWorks, LiveDemo, Gallery, Pricing, FAQ, Newsletter, Footer });
