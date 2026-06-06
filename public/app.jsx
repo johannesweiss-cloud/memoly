@@ -90,6 +90,7 @@ function App(){
       <FAQ />
       <Newsletter />
       <Footer />
+      <ChatBot />
 
       <TweaksPanel>
         <TweakSection label="Hero" />
