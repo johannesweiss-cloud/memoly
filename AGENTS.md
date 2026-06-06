@@ -9,7 +9,7 @@ Alle Aufgaben, Bugs und Ideen werden in **Linear** geführt — **nicht** parall
 Markdown-Listen im Repo.
 
 - Projekt: **memoly** → https://linear.app/johannes-weiss/project/memoly-ebe9792ee848
-- Team: **Johannes Weiß** (Key `JOH`)
+- Team: **Johannes Weiß** (Key `JO`)
 - Labels (minimal halten): `bug`, `feature`, `chore`
 - Milestones: **M1 Launch-Readiness** · **M2 Go-Live: App freischalten** · **M3 Marketing & erste Nutzer**
 

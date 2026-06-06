@@ -146,3 +146,10 @@ vite.config.ts.timestamp-*
 .DS_Store
 **/.DS_Store
 
+# Python virtual environment
+.venv/
+
+# Local agent tools & output
+tools/
+marketing_output/
+
