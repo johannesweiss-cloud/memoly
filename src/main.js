@@ -25,6 +25,7 @@ let extras = [];
 let canEdit = false;
 let setupMode = 'create'; // 'create' | 'edit'
 let currentImageCallback = null;
+let editingMomentId = null;
 
 // ─── DOM helpers ────────────────────────────────────────────────────
 const $ = (sel) => document.querySelector(sel);
@@ -108,7 +109,12 @@ function renderHero() {
   $('#hero-sub-text').innerText = currentEvent.subtitle || '';
 }
 
+function sortMoments() {
+  moments.sort((a, b) => (a.sort_order - b.sort_order) || (a.created_at < b.created_at ? -1 : 1));
+}
+
 function renderMoments() {
+  sortMoments();
   const list = $('#date-list');
   const openIds = new Set([...list.querySelectorAll('.date-card.open')].map(c => c.id.replace('card-', '')));
   list.innerHTML = '';
@@ -138,8 +144,24 @@ function renderMoments() {
           ? `<div class="img-zone"><img class="img-zone-preview" src="${imgUrl}" alt=""></div>`
           : '');
 
-    const deleteBtnHTML = canEdit
-      ? `<button class="date-delete-btn" data-delete-id="${m.id}">Aktivität löschen</button>`
+    const reorderHTML = canEdit
+      ? `<div class="date-reorder">
+          <button class="date-move-btn" data-move-id="${m.id}" data-move-dir="up"${i === 0 ? ' disabled' : ''} aria-label="Nach oben">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            Nach oben
+          </button>
+          <button class="date-move-btn" data-move-id="${m.id}" data-move-dir="down"${i === moments.length - 1 ? ' disabled' : ''} aria-label="Nach unten">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            Nach unten
+          </button>
+        </div>`
+      : '';
+
+    const actionsHTML = canEdit
+      ? `<div class="date-actions">
+          <button class="date-edit-btn" data-edit-id="${m.id}">Bearbeiten</button>
+          <button class="date-delete-btn" data-delete-id="${m.id}">Aktivität löschen</button>
+        </div>`
       : '';
 
     card.innerHTML = `
@@ -156,7 +178,8 @@ function renderMoments() {
       <div class="card-body"><div class="card-body-inner">
         <div class="card-desc-full">${esc(m.description)}</div>
         ${imgZoneHTML}
-        ${deleteBtnHTML}
+        ${reorderHTML}
+        ${actionsHTML}
       </div></div>`;
     list.appendChild(card);
   });
@@ -167,6 +190,10 @@ function renderMoments() {
     el.addEventListener('click', () => triggerMomentImageUpload(el.dataset.id)));
   list.querySelectorAll('[data-delete-id]').forEach(el =>
     el.addEventListener('click', () => handleDeleteMoment(el.dataset.deleteId)));
+  list.querySelectorAll('[data-edit-id]').forEach(el =>
+    el.addEventListener('click', () => openEditMomentModal(el.dataset.editId)));
+  list.querySelectorAll('[data-move-id]').forEach(el =>
+    el.addEventListener('click', () => moveMoment(el.dataset.moveId, el.dataset.moveDir)));
 }
 
 function toggleCard(id) {
@@ -340,11 +367,12 @@ async function submitAddModal() {
     return;
   }
   try {
+    const nextOrder = moments.length > 0 ? Math.max(...moments.map(m => m.sort_order)) + 1 : 0;
     const moment = await createMoment({
       event_id: currentEvent.id,
       title,
       description,
-      sort_order: moments.length,
+      sort_order: nextOrder,
     });
     moments.push(moment);
     renderMoments();
@@ -355,6 +383,43 @@ async function submitAddModal() {
   } catch (e) {
     console.error(e);
     showToast('Konnte Aktivität nicht speichern');
+  }
+}
+
+// ─── Edit-moment modal ─────────────────────────────────────────────
+function openEditMomentModal(momentId) {
+  const moment = moments.find(m => m.id === momentId);
+  if (!moment) return;
+  editingMomentId = momentId;
+  $('#edit-title').value = moment.title || '';
+  $('#edit-desc').value = moment.description || '';
+  $('#edit-moment-modal').classList.remove('hidden');
+  setTimeout(() => $('#edit-title').focus(), 350);
+}
+
+function closeEditMomentModal() {
+  $('#edit-moment-modal').classList.add('hidden');
+  editingMomentId = null;
+}
+
+async function submitEditMomentModal() {
+  if (!editingMomentId) return;
+  const title = $('#edit-title').value.trim();
+  const description = $('#edit-desc').value.trim();
+  if (!title) {
+    $('#edit-title').focus();
+    return;
+  }
+  try {
+    const updated = await updateMoment(editingMomentId, { title, description });
+    const idx = moments.findIndex(m => m.id === editingMomentId);
+    if (idx !== -1) moments[idx] = { ...moments[idx], ...updated };
+    renderMoments();
+    closeEditMomentModal();
+    showToast('Gespeichert ✓');
+  } catch (e) {
+    console.error(e);
+    showToast('Konnte nicht speichern');
   }
 }
 
@@ -378,6 +443,41 @@ function triggerMomentImageUpload(momentId) {
       showToast('Upload fehlgeschlagen');
     }
   });
+}
+
+async function moveMoment(momentId, direction) {
+  sortMoments();
+  const idx = moments.findIndex(m => m.id === momentId);
+  if (idx === -1) return;
+
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= moments.length) return;
+
+  const a = moments[idx];
+  const b = moments[swapIdx];
+
+  // sort_order der beiden Nachbarn tauschen
+  const orderA = a.sort_order;
+  const orderB = b.sort_order;
+
+  // Optimistisch lokal tauschen und sofort neu rendern
+  a.sort_order = orderB;
+  b.sort_order = orderA;
+  renderMoments();
+
+  try {
+    await Promise.all([
+      updateMoment(a.id, { sort_order: a.sort_order }),
+      updateMoment(b.id, { sort_order: b.sort_order }),
+    ]);
+  } catch (e) {
+    console.error(e);
+    // Rollback bei Fehler
+    a.sort_order = orderA;
+    b.sort_order = orderB;
+    renderMoments();
+    showToast('Reihenfolge konnte nicht gespeichert werden');
+  }
 }
 
 async function handleDeleteMoment(id) {
@@ -1159,6 +1259,9 @@ $('#export-confirm-btn').addEventListener('click', () => {
 
 $('#modal-cancel-btn').addEventListener('click', closeAddModal);
 $('#modal-save-btn').addEventListener('click', submitAddModal);
+$('#edit-cancel-btn').addEventListener('click', closeEditMomentModal);
+$('#edit-save-btn').addEventListener('click', submitEditMomentModal);
+$('#edit-moment-modal').addEventListener('click', function (e) { if (e.target === this) closeEditMomentModal(); });
 $('#setup-cancel-btn').addEventListener('click', closeSetupModal);
 $('#setup-save-btn').addEventListener('click', submitSetupModal);
 
