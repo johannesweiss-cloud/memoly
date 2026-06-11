@@ -19,7 +19,7 @@ const MEMOLY_KB = [
     keys: ["was kannst du", "hilfe", "helfen", "wobei", "funktion", "kannst du", "wer bist du", "bot", "fragen"],
     label: "Was kannst du?",
     answer:
-      "Ich bin der memoly-Helfer 🙂 Ich beantworte Fragen rund um memoly — zum Beispiel:\n" +
+      "Ich bin Lumi 🙂 Ich beantworte Fragen rund um memoly — zum Beispiel:\n" +
       "• Was ist memoly?\n• Was kostet es?\n• Brauche ich ein Konto?\n• Wie funktioniert der Export?\n" +
       "Tipp die Frage einfach ein oder nutz die Vorschläge unten.",
   },
@@ -116,7 +116,7 @@ const CHAT_FALLBACK =
   "an hi@memoly.app, wir helfen dir gern weiter.";
 
 const CHAT_GREETING =
-  "Hi! Ich bin der memoly-Helfer. Frag mich, was du über memoly wissen willst — oder tipp auf eine der Fragen unten. 👇";
+  "Hi! Ich bin Lumi, dein memoly-Helfer. Frag mich, was du über memoly wissen willst — oder tipp auf eine der Fragen unten. 👇";
 
 // ─── Matching-Logik ──────────────────────────────────────────────────────────
 function normalizeText(s) {
@@ -197,8 +197,8 @@ const CHATBOT_CSS = `
     position: absolute;
     bottom: 64px;
     right: 0;
-    width: min(360px, calc(100vw - 32px));
-    height: min(540px, calc(100vh - 120px));
+    width: min(380px, calc(100vw - 32px));
+    height: min(560px, calc(100vh - 120px));
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 20px;
@@ -250,6 +250,35 @@ const CHATBOT_CSS = `
   .mly-cb-close-btn:focus-visible {
     outline: 2px solid var(--ink);
   }
+  .mly-cb-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--bg-soft);
+  }
+  .mly-cb-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--mute);
+    cursor: pointer;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    transition: all 0.15s ease;
+    border-radius: 0;
+  }
+  .mly-cb-tab:hover {
+    color: var(--ink);
+    background: rgba(0, 0, 0, 0.02);
+  }
+  .mly-cb-tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+    font-weight: 600;
+    background: var(--card);
+  }
   .mly-cb-messages {
     flex: 1;
     overflow-y: auto;
@@ -277,6 +306,41 @@ const CHATBOT_CSS = `
     background: var(--ink);
     color: var(--bg);
     border: none;
+  }
+  .mly-cb-msg.error {
+    align-self: center;
+    background: #fdf2f2;
+    color: #9b1c1c;
+    border: 1px solid #f8b4b4;
+    font-size: 12px;
+    max-width: 90%;
+    border-radius: 10px;
+    white-space: normal;
+  }
+  .mly-cb-typing {
+    align-self: flex-start;
+    background: var(--bg-soft);
+    border: 1px solid var(--line-soft);
+    color: var(--mute);
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .mly-cb-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--mute);
+    border-radius: 50%;
+    animation: mly-bounce 1.4s infinite ease-in-out both;
+  }
+  .mly-cb-dot:nth-child(1) { animation-delay: -0.32s; }
+  .mly-cb-dot:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes mly-bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
   }
   .mly-cb-suggestions {
     padding: 8px 12px 4px;
@@ -360,20 +424,32 @@ const CHATBOT_CSS = `
 // ─── UI-Komponente ───────────────────────────────────────────────────────────
 function ChatBot() {
   const [open, setOpen] = React.useState(false);
-  const [messages, setMessages] = React.useState([{ role: "bot", text: CHAT_GREETING }]);
+  const [activeTab, setActiveTab] = React.useState("simple"); // "simple" oder "smart"
+
+  // Getrennte Nachrichtenverläufe für beide Bots
+  const [messagesSimple, setMessagesSimple] = React.useState([
+    { role: "bot", text: CHAT_GREETING }
+  ]);
+  const [messagesSmart, setMessagesSmart] = React.useState([
+    { role: "bot", text: "Hi! Ich bin dein memoly KI-Assistent ✨\n\nFrag mich gerne alles zu memoly – ich helfe dir bei allen Fragen rund um deine Erinnerungs-Booklets." }
+  ]);
+
   const [input, setInput] = React.useState("");
+  const [loadingSmart, setLoadingSmart] = React.useState(false);
   const scrollRef = React.useRef(null);
   const inputRef = React.useRef(null);
 
   // Vorschlags-Chips: alle Intents mit Label
   const suggestions = MEMOLY_KB.filter((i) => i.label);
 
+  const activeMessages = activeTab === "simple" ? messagesSimple : messagesSmart;
+
   // Auto-Scroll nach unten bei neuen Nachrichten
   React.useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, open]);
+  }, [messagesSimple, messagesSmart, open, activeTab, loadingSmart]);
 
-  // Auto-Focus auf das Input-Feld, wenn der Chatbot geöffnet wird
+  // Auto-Focus auf das Input-Feld, wenn der Chatbot geöffnet oder der Tab gewechselt wird
   React.useEffect(() => {
     if (open) {
       const timer = setTimeout(() => {
@@ -381,7 +457,7 @@ function ChatBot() {
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [open]);
+  }, [open, activeTab]);
 
   // Escape-Taste zum Schließen des Chatfensters
   React.useEffect(() => {
@@ -401,9 +477,62 @@ function ChatBot() {
   function ask(question) {
     const q = question.trim();
     if (!q) return;
-    const answer = findAnswer(q);
-    setMessages((m) => [...m, { role: "user", text: q }, { role: "bot", text: answer }]);
-    setInput("");
+
+    if (activeTab === "simple") {
+      const answer = findAnswer(q);
+      setMessagesSimple((m) => [...m, { role: "user", text: q }, { role: "bot", text: answer }]);
+      setInput("");
+    } else {
+      if (loadingSmart) return;
+
+      setMessagesSmart((m) => [...m, { role: "user", text: q }]);
+      setInput("");
+      setLoadingSmart(true);
+
+      // Verlauf mitsenden (ohne den ersten Begrüßungs-Post und ohne Fehler)
+      const historyPayload = messagesSmart
+        .slice(1)
+        .filter((m) => m.role !== "error")
+        .map((m) => ({
+          role: m.role === "bot" ? "assistant" : "user",
+          content: m.text
+        }));
+
+      fetch("https://vddmjeihfsmibtcwxaaa.supabase.co/functions/v1/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: q,
+          history: historyPayload
+        })
+      })
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((data) => {
+            throw new Error(data.detail || "Verbindung zum Backend fehlgeschlagen.");
+          });
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setMessagesSmart((m) => [...m, { role: "bot", text: data.response }]);
+      })
+      .catch((err) => {
+        console.error("Smart chatbot error:", err);
+        setMessagesSmart((m) => [
+          ...m,
+          {
+            role: "error",
+            text: `⚠️ ${err.message}\n\nStelle sicher, dass die Supabase Edge Function deployt wurde und der GROQ_API_KEY in den Supabase Secrets gesetzt ist.`
+          }
+        ]);
+      })
+      .finally(() => {
+        setLoadingSmart(false);
+      });
+    }
   }
 
   function onSubmit(e) {
@@ -422,21 +551,47 @@ function ChatBot() {
             <div className="mly-cb-header">
               <img src="/logo.png" alt="" style={{ width: 26, height: 26, objectFit: "contain" }} />
               <div style={{ flex: 1 }}>
-                <div className="mly-cb-header-title">memoly Helfer</div>
-                <div className="mly-cb-header-subtitle">Antwortet sofort</div>
+                <div className="mly-cb-header-title">Lumi</div>
+                <div className="mly-cb-header-subtitle">Vergleichs-Experiment</div>
               </div>
               <button onClick={() => setOpen(false)} className="mly-cb-close-btn" aria-label="Chat schließen">
                 <ChatIconClose />
               </button>
             </div>
 
+            {/* Umschalt-Tabs */}
+            <div className="mly-cb-tabs">
+              <button
+                type="button"
+                onClick={() => setActiveTab("simple")}
+                className={`mly-cb-tab ${activeTab === "simple" ? "active" : ""}`}
+              >
+                FAQ-Bot (Klassisch)
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("smart")}
+                className={`mly-cb-tab ${activeTab === "smart" ? "active" : ""}`}
+              >
+                KI-Support (Smart)
+              </button>
+            </div>
+
             {/* Nachrichten */}
             <div ref={scrollRef} className="mly-cb-messages">
-              {messages.map((m, i) => (
+              {activeMessages.map((m, i) => (
                 <div key={i} className={`mly-cb-msg ${m.role}`}>
                   {m.text}
                 </div>
               ))}
+              {activeTab === "smart" && loadingSmart && (
+                <div className="mly-cb-typing">
+                  <div className="mly-cb-dot"></div>
+                  <div className="mly-cb-dot"></div>
+                  <div className="mly-cb-dot"></div>
+                  <span style={{ marginLeft: 4 }}>Bot schreibt...</span>
+                </div>
+              )}
             </div>
 
             {/* Vorschlags-Chips */}
@@ -466,7 +621,7 @@ function ChatBot() {
 
         {/* Schwebender Auslöse-Button */}
         <button onClick={() => setOpen((o) => !o)} className={`mly-cb-trigger ${open ? 'open' : ''}`} aria-label={open ? "Chat schließen" : "Hilfe öffnen"}>
-          {open ? <ChatIconClose light /> : <><ChatIconChat /> Hilfe</>}
+          {open ? <ChatIconClose light /> : <><ChatIconChat /> Hilfe / Experiment</>}
         </button>
       </div>
     </>

@@ -274,7 +274,7 @@ function renderEvent() {
   const exportBtn = $('.export-btn');
   if (!canEdit) {
     exportBtn.style.display = 'none';
-  } else if (currentEvent.is_paid) {
+  } else if (currentEvent.is_paid || import.meta.env.DEV) {
     exportBtn.textContent = 'Als Erinnerung exportieren ↓';
     exportBtn.classList.remove('export-btn--locked');
     exportBtn.style.display = '';
@@ -1148,7 +1148,7 @@ function closeExportModal() {
 }
 $('.export-btn').addEventListener('click', () => {
   if (!canEdit) return;
-  if (!currentEvent?.is_paid) {
+  if (!currentEvent?.is_paid && !import.meta.env.DEV) {
     openPaywallModal();
   } else {
     openExportModal();
