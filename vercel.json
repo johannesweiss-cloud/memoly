@@ -1,9 +1,3 @@
 {
-  "redirects": [
-    {
-      "source": "/app.html",
-      "destination": "/",
-      "permanent": false
-    }
-  ]
+  "redirects": []
 }
