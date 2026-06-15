@@ -508,30 +508,30 @@ function ChatBot() {
           history: historyPayload
         })
       })
-      .then((res) => {
-        if (!res.ok) {
-          return res.json().then((data) => {
-            throw new Error(data.detail || "Verbindung zum Backend fehlgeschlagen.");
-          });
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setMessagesSmart((m) => [...m, { role: "bot", text: data.response }]);
-      })
-      .catch((err) => {
-        console.error("Smart chatbot error:", err);
-        setMessagesSmart((m) => [
+        .then((res) => {
+          if (!res.ok) {
+            return res.json().then((data) => {
+              throw new Error(data.detail || "Verbindung zum Backend fehlgeschlagen.");
+            });
+          }
+          return res.json();
+        })
+        .then((data) => {
+          setMessagesSmart((m) => [...m, { role: "bot", text: data.response }]);
+        })
+        .catch((err) => {
+          console.error("Smart chatbot error:", err);
+          setMessagesSmart((m) => [
           ...m,
           {
             role: "error",
             text: "⚠️ Verbindung zum Support-Assistenten fehlgeschlagen. Bitte versuche es später noch einmal oder wende dich an hi@memoly.app."
           }
         ]);
-      })
-      .finally(() => {
-        setLoadingSmart(false);
-      });
+        })
+        .finally(() => {
+          setLoadingSmart(false);
+        });
     }
   }
 
@@ -552,7 +552,7 @@ function ChatBot() {
               <img src="/logo.png" alt="" style={{ width: 26, height: 26, objectFit: "contain" }} />
               <div style={{ flex: 1 }}>
                 <div className="mly-cb-header-title">Lumi</div>
-                <div className="mly-cb-header-subtitle">Vergleichs-Experiment</div>
+                <div className="mly-cb-header-subtitle">Support-Assistent</div>
               </div>
               <button onClick={() => setOpen(false)} className="mly-cb-close-btn" aria-label="Chat schließen">
                 <ChatIconClose />
@@ -621,7 +621,7 @@ function ChatBot() {
 
         {/* Schwebender Auslöse-Button */}
         <button onClick={() => setOpen((o) => !o)} className={`mly-cb-trigger ${open ? 'open' : ''}`} aria-label={open ? "Chat schließen" : "Hilfe öffnen"}>
-          {open ? <ChatIconClose light /> : <><ChatIconChat /> Hilfe / Experiment</>}
+          {open ? <ChatIconClose light /> : <><ChatIconChat /> Hilfe</>}
         </button>
       </div>
     </>
