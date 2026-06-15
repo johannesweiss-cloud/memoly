@@ -24,19 +24,19 @@ memoly ist eine Web-App, die gemeinsame Erlebnisse (wie Urlaube, Ausflüge, Hoch
 * **Einmalige Zahlung:** Bezahlt wird erst beim Exportieren des fertigen PDFs.
 * **Preis:** Einmalig **3,99 € pro Event**.
 * **Kein Abonnement (Abo):** Es gibt keine monatliche Grundgebühr und keine versteckten Kosten. Man zahlt nur, wenn man das fertige Booklet wirklich als Datei haben möchte.
-* **Zahlungsabwickler:** Die Zahlung erfolgt sicher über **Lemon Squeezy**. Lemon Squeezy fungiert als *Merchant of Record* (Zahlungsempfänger im rechtlichen Sinne). Das bedeutet, dass Lemon Squeezy die MwSt.-Berechnung (auch länderübergreifend in der EU) und die Rechnungsstellung komplett übernimmt. Für Kunden ist dies absolut sicher und transparent.
+* **Zahlungsabwickler:** Die Zahlung erfolgt sicher über einen etablierten und zertifizierten Zahlungsdienstleister (Merchant of Record). Dieser übernimmt die gesetzeskonforme Abrechnung, die MwSt.-Berechnung (auch länderübergreifend in der EU) und die Rechnungsstellung komplett. Für Kunden ist dies absolut sicher, verschlüsselt und transparent.
 
 ---
 
 ## 4. Benutzerkonto & Registrierung
 * **Kein Login nötig:** Für die Erstellung eines Booklets muss man sich nicht registrieren und kein Konto anlegen.
-* **Bearbeitungsrechte (Tokens):** Die Berechtigung, ein Event zu bearbeiten, wird über ein sicheres Token (\`edit_token\`) geregelt, das lokal im Browser (\`LocalStorage\` unter dem Schlüssel \`memoly_edit_tokens\`) als JSON-Map abgelegt wird. So kann man seine Trips auch ohne Login bearbeiten.
+* **Bearbeitungsrechte (Tokens):** Die Berechtigung, ein Event zu bearbeiten, wird über ein sicheres, lokal gespeichertes Token geregelt. So kann man seine Trips auch ohne Login bearbeiten.
 * **Teilen:** Man kann den Link zu einem Trip teilen. Andere Personen sehen das Booklet standardmäßig im schreibgeschützten Modus (Read-Only), es sei denn, sie besitzen den Bearbeitungs-Token.
 
 ---
 
 ## 5. Datenschutz & Sicherheit
-* **Server-Standort:** Alle Fotos und Daten werden sicher in der Cloud auf Servern innerhalb der Europäischen Union (Supabase Storage / Database) gehostet.
+* **Server-Standort:** Alle Fotos und Daten werden sicher in der Cloud auf Servern innerhalb der Europäischen Union gehostet.
 * **Kein KI-Training:** Fotos und persönliche Geschichten der Nutzer werden unter keinen Umständen für das Training von KI-Modellen verwendet.
 * **Keine Werbung:** Daten werden niemals an Werbenetzwerke verkauft oder weitergegeben.
 * **Löschung:** Nutzer können ihre Events samt aller hochgeladenen Fotos jederzeit eigenständig und vollständig löschen.

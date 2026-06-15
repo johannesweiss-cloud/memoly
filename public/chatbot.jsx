@@ -525,7 +525,7 @@ function ChatBot() {
           ...m,
           {
             role: "error",
-            text: `⚠️ ${err.message}\n\nStelle sicher, dass die Supabase Edge Function deployt wurde und der GROQ_API_KEY in den Supabase Secrets gesetzt ist.`
+            text: "⚠️ Verbindung zum Support-Assistenten fehlgeschlagen. Bitte versuche es später noch einmal oder wende dich an hi@memoly.app."
           }
         ]);
       })
